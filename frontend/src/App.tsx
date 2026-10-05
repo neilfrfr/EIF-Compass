@@ -1,10 +1,11 @@
 import type { Session } from '@supabase/supabase-js'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { demoFellows, type EventItem, type Fellow, type Requirement, type Role, type Task, type View } from './data'
+import type { Role, View } from './data'
 import { supabase } from './lib/supabase'
 import AuthGate from './AuthGate'
 import WorkManager from './WorkManager'
+import Dashboard from './Dashboard'
 
 type IconName = 'home' | 'tasks' | 'check' | 'calendar' | 'bell' | 'search' | 'chevron' | 'arrow' | 'clock' | 'spark' | 'trend' | 'users' | 'flag' | 'plus' | 'dots' | 'lock' | 'close'
 
@@ -31,16 +32,6 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
-function statusClass(status: string) {
-  return `status status-${status.toLowerCase().replaceAll(' ', '-')}`
-}
-
-function shortDate(value?: string | null) {
-  if (!value) return 'No due date'
-  const date = new Date(`${value.slice(0, 10)}T12:00:00`)
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
 export default function App() {
   return <AuthGate>{session => <Workspace key={session.user.id} session={session}/>}</AuthGate>
 }
@@ -48,15 +39,10 @@ export default function App() {
 export function Workspace({ session }: { session: Session }) {
   const [role, setRole] = useState<Role | null>(null)
   const [view, setView] = useState<View>('overview')
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [requirements, setRequirements] = useState<Requirement[]>([])
-  const [events, setEvents] = useState<EventItem[]>([])
-  const [fellows] = useState<Fellow[]>(demoFellows)
   const [profile, setProfile] = useState<{ display_name?: string; role?: Role; team_name?: string; cohort_id?: string } | null>(null)
   const [loadingData, setLoadingData] = useState(false)
   const [connected, setConnected] = useState(false)
   const [toast, setToast] = useState('')
-  const [search, setSearch] = useState('')
   const [revision, setRevision] = useState(0)
   const [workspaceError, setWorkspaceError] = useState('')
 
@@ -88,18 +74,12 @@ export function Workspace({ session }: { session: Session }) {
       if (!supabase || !session?.user?.id) {
         setConnected(false)
         setProfile(null)
-        setTasks([])
-        setRequirements([])
-        setEvents([])
         setLoadingData(false)
         return
       }
       setLoadingData(true)
       setWorkspaceError('')
       setConnected(false)
-      setTasks([])
-      setRequirements([])
-      setEvents([])
       try {
         const { data: profileData, error: profileError } = await supabase.from('profiles').select('display_name,role,team_name,cohort_id').eq('id', session.user.id).maybeSingle()
         if (!active) return
@@ -109,56 +89,9 @@ export function Workspace({ session }: { session: Session }) {
         if (profileData.role !== 'lead' && profileData.role !== 'intern') throw new Error('Your profile has an unsupported role. Contact your fellowship lead.')
         setRole(profileData.role)
 
-        let requirementsQuery = supabase.from('requirements').select('id,title,description,due_date,status,assignee_id').order('due_date')
-        if (profileData?.role !== 'lead') requirementsQuery = requirementsQuery.or(`assignee_id.is.null,assignee_id.eq.${session.user.id}`)
-
-        const [taskResult, requirementResult, eventResult, submissionResult] = await Promise.all([
-          supabase.from('tasks').select('id,title,project_name,due_date,priority,status,assignee_id').order('due_date'),
-          requirementsQuery,
-          supabase.from('events').select('id,title,starts_at,event_type').order('starts_at'),
-          supabase.from('requirement_submissions').select('requirement_id,user_id,status').eq('user_id', session.user.id),
-        ])
-        if (!active) return
-        if (!taskResult.error) {
-          setTasks(taskResult.data.map((item: any) => ({
-            id: item.id,
-            canComplete: item.assignee_id === session.user.id,
-            title: item.title,
-            project: item.project_name || 'Fellowship work',
-            due: shortDate(item.due_date),
-            priority: item.priority || 'Medium',
-            status: (item.status === 'for_review' ? 'For review' : item.status === 'completed' ? 'Completed' : item.status === 'in_progress' ? 'In progress' : 'To do') as Task['status'],
-          })))
-        }
-        if (!requirementResult.error) {
-          setRequirements(requirementResult.data.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            description: item.description || 'Fellowship requirement',
-            due: shortDate(item.due_date),
-            status: (() => { const state = submissionResult.data?.find(sub => sub.requirement_id === item.id)?.status || item.status; const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); return state === 'completed' ? 'Completed' : state === 'in_review' ? 'In review' : item.due_date && item.due_date < today ? 'Overdue' : 'Pending' })() as Requirement['status'],
-          })))
-        }
-        if (!eventResult.error) {
-          setEvents(eventResult.data.map((item: any) => {
-            const date = new Date(item.starts_at)
-            return {
-              day: date.toLocaleDateString('en-US', { day: '2-digit' }),
-              month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-              title: item.title,
-              meta: `${date.toLocaleDateString('en-US', { weekday: 'long' })} · ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
-              kind: item.event_type || 'Fellowship event',
-            }
-          }))
-        }
-        const queryError = taskResult.error || requirementResult.error || eventResult.error || submissionResult.error
-        if (queryError) throw queryError
         setConnected(true)
       } catch (error) {
         if (!active) return
-        setTasks([])
-        setRequirements([])
-        setEvents([])
         setRole(null)
         setProfile(null)
         setWorkspaceError(error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Could not load your workspace. Check that the Supabase schema and permissions are configured.')
@@ -172,14 +105,11 @@ export function Workspace({ session }: { session: Session }) {
 
   const activeNav: { id: View; label: string; icon: IconName }[] = [
     { id: 'overview', label: 'Overview', icon: 'home' },
-    { id: 'work', label: 'My work', icon: 'tasks' },
+    { id: 'work', label: role === 'lead' ? 'Cohort tasks' : 'My work', icon: 'tasks' },
     { id: 'requirements', label: 'Requirements', icon: 'check' },
     { id: 'calendar', label: 'Calendar', icon: 'calendar' },
   ]
-  const heading = view === 'overview' ? 'Overview' : view === 'work' ? 'My work' : view === 'requirements' ? 'Requirements' : 'Calendar'
-  const filteredRequirements = useMemo(() => requirements.filter(item => `${item.title} ${item.description} ${item.status}`.toLowerCase().includes(search.toLowerCase())), [requirements, search])
-  const dueSoon = requirements.filter(item => item.status !== 'Completed').length
-  const completeCount = requirements.filter(item => item.status === 'Completed').length
+  const heading = view === 'overview' ? 'Overview' : view === 'work' ? (role === 'lead' ? 'Cohort tasks' : 'My work') : view === 'requirements' ? 'Requirements' : 'Calendar'
   const displayName = profile?.display_name || 'EIF Fellow'
 
   async function signOut() {
@@ -192,30 +122,16 @@ export function Workspace({ session }: { session: Session }) {
     }
   }
 
-  async function completeDemoTask(taskId: string) {
-    if (supabase && session?.user?.id) {
-      const { data, error } = await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId).eq('assignee_id', session.user.id).select('id').maybeSingle()
-      if (error || !data) {
-        setToast('Could not update this task. Check the Supabase policy and try again.')
-        window.setTimeout(() => setToast(''), 3000)
-        return
-      }
-    }
-    setTasks(current => current.map(task => task.id === taskId ? { ...task, status: 'Completed' } : task))
-    setToast('Nice work — your task is marked complete.')
-    window.setTimeout(() => setToast(''), 2600)
-  }
-
   if (role === null) return <main className="login-page login-checking"><section className="login-card"><h1>{loadingData ? 'Loading your workspace…' : 'Workspace unavailable'}</h1>{workspaceError && <p role="alert">{workspaceError}</p>}{!loadingData && <div className="manager-actions"><button className="primary-button" onClick={() => setRevision(value => value + 1)}>Retry</button><button className="text-button" onClick={() => void signOut()}>Sign out</button></div>}</section></main>
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell workspace-${role}`}>
       <aside className="sidebar">
         <div className="brand"><div className="brand-mark"><CompassMark /></div><div><strong>eif compass</strong><span>INNOVATION FELLOWSHIP</span></div></div>
-        <div className="cohort-switch"><span className="cohort-dot"/><span>2026 Fellowship</span><Icon name="chevron" size={15}/></div>
+        <div className="cohort-switch"><span className="cohort-dot"/><span>Fellowship workspace</span><Icon name="chevron" size={15}/></div>
         <div className="side-label">WORKSPACE</div>
         <nav className="side-nav" aria-label="Main navigation">
-          {activeNav.map(item => <button key={item.id} className={`nav-item ${view === item.id ? 'selected' : ''}`} onClick={() => setView(item.id)}><Icon name={item.icon}/><span>{item.label}</span>{item.id === 'requirements' && <span className="nav-count">{dueSoon}</span>}</button>)}
+          {activeNav.map(item => <button key={item.id} className={`nav-item ${view === item.id ? 'selected' : ''}`} onClick={() => setView(item.id)}><Icon name={item.icon}/><span>{item.label}</span></button>)}
         </nav>
         <div className="side-spacer"/>
         <button className="profile-card" onClick={() => void signOut()} title="Sign out" aria-label="Sign out"><div className="avatar avatar-lilac">{initials(displayName)}</div><div className="profile-info"><strong>{displayName}</strong><span>Sign out</span></div><Icon name="dots" size={16}/></button>
@@ -226,8 +142,6 @@ export function Workspace({ session }: { session: Session }) {
         <header className="topbar">
           <div className="breadcrumb"><span>EIF Compass</span><span className="crumb-slash">/</span><strong>{heading}</strong></div>
           <div className="top-actions">
-            <label className="search-box"><Icon name="search" size={17}/><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search requirements" aria-label="Search requirements"/><kbd>⌘ K</kbd></label>
-            <button className="icon-button notification-button" aria-label="Notifications" onClick={() => setToast('You’re all caught up on notifications.')}><Icon name="bell"/><i/></button>
             <div className="top-divider"/>
             <button className="mini-profile" onClick={() => void signOut()} aria-label="Sign out"><div className="avatar avatar-lilac">{initials(displayName)}</div><Icon name="chevron" size={14}/></button>
           </div>
@@ -235,11 +149,11 @@ export function Workspace({ session }: { session: Session }) {
 
         <div className="page-wrap">
           <div className="page-heading">
-            <div><div className="eyebrow">{new Date().toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()} <span className="eyebrow-line"/></div><h1>{view === 'overview' ? `Good morning, ${displayName.split(' ')[0]}.` : heading}<span className="heading-period">{view === 'overview' ? ' ✦' : ''}</span></h1><p>{role === 'lead' ? 'Here’s how your cohort is moving this week.' : 'A clear view of your fellowship, all in one place.'}</p></div>
-            <div className="heading-actions"><span className="data-pill">{role === 'lead' ? 'Lead workspace' : 'Intern workspace'}</span><button className="text-button" onClick={() => setRevision(value => value + 1)}>Refresh workspace</button><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? (role === 'lead' ? 'Live records · sample metrics' : 'Supabase connected') : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
+            <div><div className="eyebrow">{new Date().toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()} <span className="eyebrow-line"/></div><h1>{view === 'overview' ? `Welcome, ${displayName.split(' ')[0]}.` : heading}<span className="heading-period">{view === 'overview' ? ' ✦' : ''}</span></h1><p>{role === 'lead' ? 'Here’s how your cohort is moving this week.' : 'A clear view of your fellowship, all in one place.'}</p></div>
+            <div className="heading-actions"><span className="data-pill">{role === 'lead' ? 'Lead workspace' : 'Intern workspace'}</span><button className="text-button" onClick={() => setRevision(value => value + 1)}>Refresh workspace</button><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? 'Profile verified' : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
           </div>
 
-          {view !== 'overview' && supabase && profile?.cohort_id ? <WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : role === 'intern' ? <InternContent view={view} tasks={tasks} requirements={filteredRequirements} events={events} completeTask={completeDemoTask} completeCount={completeCount} loading={loadingData}/> : <LeadContent view={view} fellows={fellows} requirements={filteredRequirements} tasks={tasks} events={events}/>}
+          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={setView}/> : <WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
 
           <footer className="page-footer"><span>EIF COMPASS <span className="footer-sep">·</span> FELLOWSHIP COHORT 2026</span><span>Small steps, meaningful progress.</span></footer>
         </div>
@@ -249,69 +163,6 @@ export function Workspace({ session }: { session: Session }) {
 
     </div>
   )
-}
-
-function InternContent({ view, tasks, requirements, events, completeTask, completeCount, loading }: { view: View; tasks: Task[]; requirements: Requirement[]; events: EventItem[]; completeTask: (id: string) => void; completeCount: number; loading: boolean }) {
-  if (view === 'requirements') return <RequirementsPage requirements={requirements} loading={loading}/>
-  if (view === 'work') return <TasksPage tasks={tasks} completeTask={completeTask}/>
-  if (view === 'calendar') return <CalendarPage events={events}/>
-  return <>
-    <section className="hero-grid">
-      <article className="progress-card">
-        <div className="progress-top"><div><span className="card-kicker">YOUR FELLOWSHIP JOURNEY</span><h2>Week 2 <span>of 8</span></h2></div><div className="week-badge"><span>W</span> 02</div></div>
-        <p className="progress-copy">You’re finding your rhythm. Keep showing up and the progress will follow.</p>
-        <div className="progress-track"><span style={{ width: '28%' }}/></div>
-        <div className="progress-bottom"><span><b>28%</b> fellowship complete</span><span>Next milestone <b>Oct 14</b></span></div>
-        <div className="progress-spark"><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/><span/></div>
-      </article>
-      <article className="nudge-card"><div className="nudge-icon"><Icon name="spark" size={19}/></div><div className="nudge-label">YOUR NEXT BEST ACTION</div><h3>Finish your interview guide</h3><p>It’s your highest-priority task, and your team needs it before the check-in.</p><div className="nudge-bottom"><span><Icon name="clock" size={14}/> Due Oct 6</span><button onClick={() => window.dispatchEvent(new CustomEvent('open-work-view'))}>View task <Icon name="arrow" size={15}/></button></div><div className="nudge-sticker">Suggested for you <span>✦</span></div></article>
-    </section>
-    <section className="stats-grid">
-      <StatCard label="Tasks in progress" value={String(tasks.filter(task => task.status !== 'Completed').length).padStart(2, '0')} detail="1 due this week" icon="tasks" tone="mint" trend="+2 this week"/>
-      <StatCard label="Requirements done" value={`${completeCount}/${requirements.length}`} detail="One more under review" icon="check" tone="peach" trend="On track"/>
-      <StatCard label="Upcoming events" value={String(events.length).padStart(2, '0')} detail={events[0] ? `Next: ${events[0].title}` : 'No events scheduled'} icon="calendar" tone="lilac" trend="This week"/>
-    </section>
-    <div className="content-grid">
-      <section className="panel task-panel"><div className="panel-heading"><div><span className="card-kicker">KEEP YOUR MOMENTUM</span><h2>What’s on your plate</h2></div><button className="text-button" onClick={() => window.dispatchEvent(new CustomEvent('set-view', { detail: 'work' }))}>See all <Icon name="arrow" size={15}/></button></div><div className="task-list">{tasks.slice(0, 3).map(task => <TaskRow key={task.id} task={task} onComplete={completeTask}/>)}</div><button className="add-task-row" onClick={() => window.dispatchEvent(new CustomEvent('set-view', { detail: 'work' }))}><Icon name="plus" size={16}/> Explore your tasks</button></section>
-      <section className="panel requirements-panel"><div className="panel-heading"><div><span className="card-kicker">STAY ON TRACK</span><h2>Requirements</h2></div><button className="text-button" onClick={() => window.dispatchEvent(new CustomEvent('set-view', { detail: 'requirements' }))}>View all <Icon name="arrow" size={15}/></button></div><div className="req-progress"><div className="req-ring"><div><b>{completeCount}</b><span>of {requirements.length}</span></div></div><div className="req-progress-copy"><strong>You’re making progress</strong><span>Keep your requirements up to date to stay on track.</span><div className="mini-meter"><span style={{ width: `${requirements.length ? Math.max(20, completeCount / requirements.length * 100) : 0}%` }}/></div></div></div><div className="compact-reqs">{requirements.slice(0, 3).map(item => <div className="compact-req" key={item.id}><span className={`req-check ${item.status === 'Completed' ? 'done' : ''}`}>{item.status === 'Completed' ? '✓' : ''}</span><span>{item.title}</span><span className={statusClass(item.status)}>{item.status}</span></div>)}</div></section>
-    </div>
-    <section className="panel events-panel"><div className="panel-heading"><div><span className="card-kicker">MARK YOUR CALENDAR</span><h2>Coming up</h2></div><button className="text-button" onClick={() => window.dispatchEvent(new CustomEvent('set-view', { detail: 'calendar' }))}>Open calendar <Icon name="arrow" size={15}/></button></div><div className="event-row">{events.map(event => <div className="event-card" key={event.title}><div className="event-date"><strong>{event.day}</strong><span>{event.month}</span></div><div className="event-info"><strong>{event.title}</strong><span><Icon name="clock" size={13}/>{event.meta}</span></div><span className="event-kind">{event.kind}</span></div>)}</div></section>
-  </>
-}
-
-function LeadContent({ view, fellows, requirements, tasks, events }: { view: View; fellows: Fellow[]; requirements: Requirement[]; tasks: Task[]; events: EventItem[] }) {
-  if (view === 'requirements') return <RequirementsPage requirements={requirements} loading={false} lead/>
-  if (view === 'calendar') return <CalendarPage events={events}/>
-  if (view === 'work') return <section className="panel"><div className="panel-heading"><div><span className="card-kicker">COHORT TASKS</span><h2>Team tasks</h2></div><span className="data-pill">{tasks.length} active</span></div>{tasks.map(task => <TaskRow key={task.id} task={task} onComplete={() => undefined} lead/>)}</section>
-  return <>
-    <section className="lead-hero"><div><span className="card-kicker">SAMPLE COHORT PULSE</span><h2>A little progress, every day.</h2><p>Your fellows have completed <b>68%</b> of their current sprint commitments. Here’s where a nudge could help.</p><div className="lead-hero-foot"><span className="live-dot"/> Sample data preview <span className="hero-foot-divider"/> 20 fellows <span className="hero-foot-divider"/> 5 teams</div></div><div className="lead-illustration"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="orbit-center"><CompassMark/></div><span className="orbit-leaf leaf-a">✦</span><span className="orbit-leaf leaf-b">✧</span><span className="orbit-leaf leaf-c">✦</span></div></section>
-    <section className="stats-grid lead-stats"><StatCard label="Active fellows" value="20" detail="Across 5 project teams" icon="users" tone="mint" trend="All active"/><StatCard label="Requirements on time" value="86%" detail="3 due before Friday" icon="check" tone="peach" trend="+8% this sprint"/><StatCard label="Needs a check-in" value="03" detail="Across 2 teams" icon="flag" tone="lilac" trend="View fellows"/></section>
-    <div className="content-grid lead-content-grid"><section className="panel fellows-panel"><div className="panel-heading"><div><span className="card-kicker">YOUR PEOPLE</span><h2>Team pulse</h2></div><button className="text-button">View cohort <Icon name="arrow" size={15}/></button></div><div className="fellow-table"><div className="fellow-head"><span>FELLOW</span><span>TEAM</span><span>PROGRESS</span><span>STATUS</span></div>{fellows.map((fellow, index) => <div className="fellow-row" key={fellow.name}><div className="fellow-name"><div className={`avatar avatar-${index}`}>{fellow.initials}</div><strong>{fellow.name}</strong></div><span className="team-name">{fellow.team}</span><div className="fellow-progress"><span><i style={{ width: `${fellow.progress}%` }}/></span><small>{fellow.progress}%</small></div><span className={fellow.needsAttention ? 'attention-pill' : 'steady-pill'}>{fellow.needsAttention ? 'Check in' : 'On track'}</span></div>)}</div></section><section className="panel lead-nudge"><div className="panel-heading"><div><span className="card-kicker">A GENTLE NUDGE</span><h2>Needs your attention</h2></div><span className="attention-count">2</span></div><div className="nudge-person"><div className="avatar avatar-2">NG</div><div><strong>Nina Garcia</strong><span>Community Insights team</span></div><span className="attention-pill">3 days behind</span></div><p>Her Sprint 1 project brief is still pending. A quick check-in may help uncover a blocker.</p><div className="nudge-actions"><button className="secondary-button" onClick={() => window.dispatchEvent(new CustomEvent('set-view', { detail: 'requirements' }))}>View progress</button><button className="round-arrow" aria-label="View next action"><Icon name="arrow" size={17}/></button></div><div className="lead-note"><Icon name="spark" size={15}/> Suggested from requirement status · No automated judgment</div></section></div>
-    <section className="panel events-panel"><div className="panel-heading"><div><span className="card-kicker">THIS WEEK</span><h2>Upcoming moments</h2></div><button className="text-button" onClick={() => window.dispatchEvent(new CustomEvent('set-view', { detail: 'calendar' }))}>Open calendar <Icon name="arrow" size={15}/></button></div><div className="event-row">{events.map(event => <div className="event-card" key={event.title}><div className="event-date"><strong>{event.day}</strong><span>{event.month}</span></div><div className="event-info"><strong>{event.title}</strong><span><Icon name="clock" size={13}/>{event.meta}</span></div><span className="event-kind">{event.kind}</span></div>)}</div></section>
-  </>
-}
-
-function StatCard({ label, value, detail, icon, tone, trend }: { label: string; value: string; detail: string; icon: IconName; tone: string; trend: string }) {
-  return <article className="stat-card"><div className={`stat-icon ${tone}`}><Icon name={icon} size={17}/></div><span className="stat-label">{label}</span><div className="stat-main"><strong>{value}</strong><span className="stat-trend"><Icon name="trend" size={12}/>{trend}</span></div><span className="stat-detail">{detail}</span></article>
-}
-
-function TaskRow({ task, onComplete, lead = false }: { task: Task; onComplete: (id: string) => void; lead?: boolean }) {
-  return <div className="task-row"><button className={`task-check ${task.status === 'Completed' ? 'checked' : ''}`} disabled={lead || task.canComplete === false || task.status === 'Completed'} aria-label={`Mark ${task.title} complete`} onClick={() => !lead && onComplete(task.id)}>{task.status === 'Completed' && '✓'}</button><div className="task-copy"><strong>{task.title}</strong><span>{task.project}</span></div><div className="task-meta"><span className={`priority priority-${task.priority.toLowerCase()}`}><i/>{task.priority}</span><span className="due-date"><Icon name="clock" size={13}/>{task.due}</span></div><span className={statusClass(task.status)}>{task.status}</span><button className="row-more" aria-label="More task options"><Icon name="dots" size={16}/></button></div>
-}
-
-function RequirementsPage({ requirements, loading, lead = false }: { requirements: Requirement[]; loading: boolean; lead?: boolean }) {
-  const [filter, setFilter] = useState('All')
-  const statuses = ['All', 'Pending', 'In review', 'Completed', 'Overdue']
-  const shown = filter === 'All' ? requirements : requirements.filter(item => item.status === filter)
-  return <section className="panel full-page-panel"><div className="panel-heading"><div><span className="card-kicker">{lead ? 'COHORT TRACKING' : 'YOUR FELLOWSHIP CHECKLIST'}</span><h2>{lead ? 'Requirement progress' : 'Your requirements'}</h2></div><span className="data-pill">{requirements.filter(item => item.status === 'Completed').length} of {requirements.length} complete</span></div><p className="section-intro">{lead ? 'Stay close to what’s due and where fellows may need support.' : 'Everything you need to complete during the fellowship, with clear due dates and status.'}</p><div className="filter-tabs">{statuses.map(item => <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}{item === 'All' && <span>{requirements.length}</span>}</button>)}</div>{loading && <div className="loading-line">Syncing your workspace…</div>}<div className="requirement-list">{shown.map(item => <article className="requirement-item" key={item.id}><div className={`requirement-symbol ${item.status === 'Completed' ? 'done' : item.status === 'Overdue' ? 'late' : ''}`}>{item.status === 'Completed' ? '✓' : <Icon name="flag" size={17}/>}</div><div className="requirement-detail"><strong>{item.title}</strong><span>{item.description}</span></div><div className="requirement-due"><small>DUE DATE</small><span>{item.due}</span></div><span className={statusClass(item.status)}>{item.status}</span><button className="row-more" aria-label="Requirement details"><Icon name="arrow" size={15}/></button></article>)}{shown.length === 0 && <div className="empty-state">No requirements in this view yet.</div>}</div><div className="requirements-note"><Icon name="spark" size={16}/><span><strong>Need help with a requirement?</strong> Your fellowship lead is here to support you. Add a blocker from your task view.</span></div></section>
-}
-
-function TasksPage({ tasks, completeTask }: { tasks: Task[]; completeTask: (id: string) => void }) {
-  return <section className="panel full-page-panel"><div className="panel-heading"><div><span className="card-kicker">YOUR SPRINT BOARD</span><h2>Tasks and next steps</h2></div><span className="data-pill">Week 2 · Sprint 1</span></div><p className="section-intro">Small, focused steps help your team make meaningful progress.</p><div className="task-list task-list-page">{tasks.map(task => <TaskRow key={task.id} task={task} onComplete={completeTask}/>)}</div><div className="requirements-note"><Icon name="spark" size={16}/><span><strong>Next best action:</strong> Start with the task due soonest that helps unblock your team.</span></div></section>
-}
-
-function CalendarPage({ events }: { events: EventItem[] }) {
-  return <section className="panel full-page-panel"><div className="panel-heading"><div><span className="card-kicker">YOUR FELLOWSHIP RHYTHM</span><h2>Coming up this week</h2></div><span className="data-pill">October 2026</span></div><p className="section-intro">A shared view of fellowship events, milestones, and important due dates.</p><div className="calendar-week">{['MON 05', 'TUE 06', 'WED 07', 'THU 08', 'FRI 09', 'SAT 10', 'SUN 11'].map((day, index) => <div className={`calendar-day ${index === 0 ? 'today' : ''}`} key={day}><span>{day.split(' ')[0]}</span><strong>{day.split(' ')[1]}</strong>{index === 0 && <i/>}{index === 4 && <i className="event-dot-alt"/>}</div>)}</div><div className="calendar-events">{events.map(event => <div className="calendar-event" key={event.title}><div className="event-date"><strong>{event.day}</strong><span>{event.month}</span></div><div className="event-info"><span className="event-kind">{event.kind}</span><strong>{event.title}</strong><span><Icon name="clock" size={13}/>{event.meta}</span></div><Icon name="arrow" size={16}/></div>)}</div></section>
 }
 
 function initials(name: string) { return name.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase() }

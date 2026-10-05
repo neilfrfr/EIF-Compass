@@ -12,4 +12,4 @@ RLS restricts writes and reads by cohort and ownership. Invoker triggers restric
 ## Validation
 Database regression suite passed on the connected project using authenticated/anonymous database roles; fixtures were rolled back. Component tests passed for form validation, lead create/edit, intern status updates, submission URLs, approval, Philippine event times and failed-save recovery. Production build passed.
 
-Browser visual QA and a deployed end-to-end session test remain outstanding. A clean offline install was blocked by an uncached test dependency; this is not a successful clean-install result. The overview still contains sample lead metrics and a static Next Best Action; these are separate PRD work. Existing Supabase password-protection advisory remains.
+Browser visual QA and a deployed end-to-end session test remain outstanding. A clean offline install was blocked by an uncached test dependency; this is not a successful clean-install result. The overview now derives actual records and deadline suggestions; blocker-based suggestions and the AI assistant remain separate PRD work. Existing Supabase password-protection advisory remains.

@@ -36,3 +36,54 @@
 .submission-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid #e0e7e2; }
 .work-manager button:disabled { opacity: .55; cursor: wait; }
 @media (max-width: 600px) { .work-manager { padding: 16px; } .record-form fieldset { grid-template-columns: 1fr; } .work-manager .panel-heading { align-items: start; gap: 16px; flex-wrap: wrap; } }
+
+/* Role-specific dashboards: personal work in mint, cohort management in navy. */
+.role-dashboard { display: grid; gap: 24px; --dashboard-accent: #285842; }
+.lead-dashboard { --dashboard-accent: #233b65; }
+.dashboard-hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; padding: 30px; border-radius: 22px; background: #e8f2e9; color: #234632; }
+.lead-dashboard .dashboard-hero { background: #203453; color: #fff; }
+.dashboard-hero h2 { font-size: clamp(24px,3vw,34px); letter-spacing: -.8px; margin: 12px 0; }
+.dashboard-hero p { line-height: 1.6; }
+.dashboard-date { display: block; font-size: 13px; opacity: .85; }
+.dashboard-hero .card-kicker { color: inherit; opacity: .8; }
+.hero-actions { padding: 20px; border-radius: 16px; background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: start; gap: 10px; }
+.lead-dashboard .hero-actions { background: rgba(255,255,255,.09); }
+.hero-actions h3 { margin: 0; font-size: 21px; }
+.hero-actions p { margin: 0; font-size: 13px; }
+.hero-actions button { padding: 10px 14px; border-radius: 10px; border: 1px solid currentColor; background: transparent; color: inherit; font-weight: 600; text-align: left; }
+.dashboard-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; }
+.dashboard-metrics article { border: 1px solid #e0e7e2; background: white; padding: 22px; border-radius: 16px; }
+.dashboard-metrics article > span { font-size: 13px; color: #56665f; }
+.dashboard-metrics strong { display: block; font-size: 34px; margin: 14px 0; color: var(--dashboard-accent); }
+.dashboard-metrics p { font-size: 12px; color: #61716a; line-height: 1.5; margin: 0; }
+.dashboard-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.dashboard-panel { padding: 24px; border-radius: 18px; border: 1px solid #e0e7e2; background: white; min-width: 0; }
+.dashboard-panel h3 { margin: 0 0 16px; }
+.dashboard-panel > p { font-size: 14px; color: #61716a; }
+.dashboard-section-head { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 12px; }
+.dashboard-section-head span { font-size: 12px; color: #61716a; }
+.dashboard-panel button { color: var(--dashboard-accent); background: transparent; border: none; font-weight: 600; font-size: 13px; padding: 4px; }
+.dashboard-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-top: 1px solid #edf0ee; }
+.dashboard-line strong { font-size: 14px; }
+.dashboard-line p { margin: 6px 0 0; font-size: 12px; color: #61716a; }
+.dashboard-badge { display: inline-block; white-space: nowrap; background: #edf2ef; color: #345346; font-size: 11px; border-radius: 7px; padding: 6px 9px; }
+.dashboard-badge.warning { background: #fff0e6; color: #9c421e; }
+.team-progress { padding: 14px 0; border-top: 1px solid #edf0ee; }
+.team-progress > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.team-progress progress { width: 100%; height: 9px; margin-top: 12px; accent-color: var(--dashboard-accent); }
+.team-progress p { font-size: 12px; color: #61716a; }
+.dashboard-table-scroll { overflow-x: auto; }
+.dashboard-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+.dashboard-table th { color: #65716c; font-size: 11px; font-weight: 600; }
+.dashboard-table td,.dashboard-table th { padding: 14px 12px; border-bottom: 1px solid #edf0ee; }
+.dashboard-events { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; }
+.dashboard-events article { padding: 16px; border-radius: 12px; background: #f6f8f6; }
+.dashboard-events h4 { margin: 12px 0; font-size: 14px; }
+.dashboard-events p { font-size: 12px; color: #61716a; line-height: 1.5; }
+.intern-detail { padding: 16px; background: #f4f7fa; border-radius: 12px; margin-top: 18px; }
+.intern-detail p { font-size: 13px; line-height: 1.8; }
+.workspace-lead .nav-item.selected { background: #e7edf6; color: #233b65; }
+.role-dashboard button:focus-visible { outline: 3px solid #dfb355; outline-offset: 3px; }
+@media (max-width: 1100px) { .dashboard-metrics,.dashboard-events { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 700px) { .dashboard-hero,.dashboard-columns { grid-template-columns: 1fr; } .dashboard-hero { padding: 22px; } .dashboard-panel { padding: 18px; } .dashboard-metrics { gap: 10px; } .dashboard-metrics article { padding: 16px; } .dashboard-line { align-items: start; } }
+@media (max-width: 420px) { .dashboard-events { grid-template-columns: 1fr; } }
