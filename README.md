@@ -98,3 +98,15 @@ The integration's TypeScript check and Vite production build passed on October 5
 - AI assistance and contextual reminders; FastAPI/OpenRouter remain planned integrations.
 
 The seeded names and sample progress are demonstration data, not real intern records.
+
+## Lead and intern workflows
+
+Leads can create and edit cohort tasks, requirements, and events inside the app. Task assignment lists only interns in the lead's cohort. Interns can change their own assigned task status; shared tasks are view only. Events are displayed in Philippine time.
+
+Requirements have individual submissions: interns submit HTTP(S) links; leads approve or request changes. A shared requirement does not share completion status between interns. Approved submissions cannot be changed by interns. Pending requirements with past deadlines display as overdue.
+
+For an existing database, apply `backend/supabase/migrations/20261005_lead_workflows.sql`, then `20261005_restrict_helpers.sql`, once. For a fresh project, run `backend/supabase/schema.sql` first, then both upgrades. Do not rerun the base schema on an upgraded project: its original grants and policies predate these workflows.
+
+Verification: `npm test` runs component interaction tests; `npm run build` checks TypeScript and the production build. Frontend tests require Node 24.19+ (jsdom 30). The SQL regression suite in `backend/supabase/tests/workflows.sql` creates isolated fixtures, exercises authenticated roles, and rolls back all fixture data.
+
+See `docs/lead-intern-workflows.md` for usage and verification limitations.

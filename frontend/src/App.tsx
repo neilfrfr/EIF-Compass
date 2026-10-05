@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { demoFellows, type EventItem, type Fellow, type Requirement, type Role, type Task, type View } from './data'
 import { supabase } from './lib/supabase'
 import AuthGate from './AuthGate'
+import WorkManager from './WorkManager'
 
 type IconName = 'home' | 'tasks' | 'check' | 'calendar' | 'bell' | 'search' | 'chevron' | 'arrow' | 'clock' | 'spark' | 'trend' | 'users' | 'flag' | 'plus' | 'dots' | 'lock' | 'close'
 
@@ -51,11 +52,12 @@ function Workspace({ session }: { session: Session }) {
   const [requirements, setRequirements] = useState<Requirement[]>([])
   const [events, setEvents] = useState<EventItem[]>([])
   const [fellows] = useState<Fellow[]>(demoFellows)
-  const [profile, setProfile] = useState<{ display_name?: string; role?: Role; team_name?: string } | null>(null)
+  const [profile, setProfile] = useState<{ display_name?: string; role?: Role; team_name?: string; cohort_id?: string } | null>(null)
   const [loadingData, setLoadingData] = useState(false)
   const [connected, setConnected] = useState(false)
   const [toast, setToast] = useState('')
   const [search, setSearch] = useState('')
+  const [revision, setRevision] = useState(0)
 
   useEffect(() => {
     const navigate = (event: Event) => {
@@ -89,7 +91,7 @@ function Workspace({ session }: { session: Session }) {
       setRequirements([])
       setEvents([])
       try {
-        const { data: profileData, error: profileError } = await supabase.from('profiles').select('display_name,role,team_name').eq('id', session.user.id).maybeSingle()
+        const { data: profileData, error: profileError } = await supabase.from('profiles').select('display_name,role,team_name,cohort_id').eq('id', session.user.id).maybeSingle()
         if (!active) return
         if (profileError) throw profileError
         if (!profileData) throw new Error('Your fellowship profile is missing. Ask your lead to finish your account setup.')
@@ -99,15 +101,17 @@ function Workspace({ session }: { session: Session }) {
         let requirementsQuery = supabase.from('requirements').select('id,title,description,due_date,status,assignee_id').order('due_date')
         if (profileData?.role !== 'lead') requirementsQuery = requirementsQuery.or(`assignee_id.is.null,assignee_id.eq.${session.user.id}`)
 
-        const [taskResult, requirementResult, eventResult] = await Promise.all([
+        const [taskResult, requirementResult, eventResult, submissionResult] = await Promise.all([
           supabase.from('tasks').select('id,title,project_name,due_date,priority,status,assignee_id').order('due_date'),
           requirementsQuery,
           supabase.from('events').select('id,title,starts_at,event_type').order('starts_at'),
+          supabase.from('requirement_submissions').select('requirement_id,user_id,status').eq('user_id', session.user.id),
         ])
         if (!active) return
         if (!taskResult.error) {
           setTasks(taskResult.data.map((item: any) => ({
             id: item.id,
+            canComplete: item.assignee_id === session.user.id,
             title: item.title,
             project: item.project_name || 'Fellowship work',
             due: shortDate(item.due_date),
@@ -121,7 +125,7 @@ function Workspace({ session }: { session: Session }) {
             title: item.title,
             description: item.description || 'Fellowship requirement',
             due: shortDate(item.due_date),
-            status: (item.status === 'in_review' ? 'In review' : item.status === 'completed' ? 'Completed' : item.status === 'overdue' ? 'Overdue' : 'Pending') as Requirement['status'],
+            status: (() => { const state = submissionResult.data?.find(sub => sub.requirement_id === item.id)?.status || item.status; const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); return state === 'completed' ? 'Completed' : state === 'in_review' ? 'In review' : item.due_date && item.due_date < today ? 'Overdue' : 'Pending' })() as Requirement['status'],
           })))
         }
         if (!eventResult.error) {
@@ -136,7 +140,7 @@ function Workspace({ session }: { session: Session }) {
             }
           }))
         }
-        const queryError = taskResult.error || requirementResult.error || eventResult.error
+        const queryError = taskResult.error || requirementResult.error || eventResult.error || submissionResult.error
         if (queryError) throw queryError
         setConnected(true)
       } catch (error) {
@@ -151,7 +155,7 @@ function Workspace({ session }: { session: Session }) {
     }
     void loadWorkspace()
     return () => { active = false }
-  }, [session])
+  }, [session, revision])
 
   const activeNav: { id: View; label: string; icon: IconName }[] = [
     { id: 'overview', label: 'Overview', icon: 'home' },
@@ -216,11 +220,11 @@ function Workspace({ session }: { session: Session }) {
 
         <div className="page-wrap">
           <div className="page-heading">
-            <div><div className="eyebrow">MONDAY, OCTOBER 5, 2026 <span className="eyebrow-line"/></div><h1>{view === 'overview' ? `Good morning, ${displayName.split(' ')[0]}.` : heading}<span className="heading-period">{view === 'overview' ? ' ✦' : ''}</span></h1><p>{role === 'lead' ? 'Here’s how your cohort is moving this week.' : 'A clear view of your fellowship, all in one place.'}</p></div>
+            <div><div className="eyebrow">{new Date().toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()} <span className="eyebrow-line"/></div><h1>{view === 'overview' ? `Good morning, ${displayName.split(' ')[0]}.` : heading}<span className="heading-period">{view === 'overview' ? ' ✦' : ''}</span></h1><p>{role === 'lead' ? 'Here’s how your cohort is moving this week.' : 'A clear view of your fellowship, all in one place.'}</p></div>
             <div className="heading-actions"><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? (role === 'lead' ? 'Live records · sample metrics' : 'Supabase connected') : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
           </div>
 
-          {role === 'intern' ? <InternContent view={view} tasks={tasks} requirements={filteredRequirements} events={events} completeTask={completeDemoTask} completeCount={completeCount} loading={loadingData}/> : <LeadContent view={view} fellows={fellows} requirements={filteredRequirements} tasks={tasks} events={events}/>}
+          {view !== 'overview' && supabase && profile?.cohort_id ? <WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : role === 'intern' ? <InternContent view={view} tasks={tasks} requirements={filteredRequirements} events={events} completeTask={completeDemoTask} completeCount={completeCount} loading={loadingData}/> : <LeadContent view={view} fellows={fellows} requirements={filteredRequirements} tasks={tasks} events={events}/>}
 
           <footer className="page-footer"><span>EIF COMPASS <span className="footer-sep">·</span> FELLOWSHIP COHORT 2026</span><span>Small steps, meaningful progress.</span></footer>
         </div>
@@ -277,7 +281,7 @@ function StatCard({ label, value, detail, icon, tone, trend }: { label: string; 
 }
 
 function TaskRow({ task, onComplete, lead = false }: { task: Task; onComplete: (id: string) => void; lead?: boolean }) {
-  return <div className="task-row"><button className={`task-check ${task.status === 'Completed' ? 'checked' : ''}`} aria-label={`Mark ${task.title} complete`} onClick={() => !lead && onComplete(task.id)}>{task.status === 'Completed' && '✓'}</button><div className="task-copy"><strong>{task.title}</strong><span>{task.project}</span></div><div className="task-meta"><span className={`priority priority-${task.priority.toLowerCase()}`}><i/>{task.priority}</span><span className="due-date"><Icon name="clock" size={13}/>{task.due}</span></div><span className={statusClass(task.status)}>{task.status}</span><button className="row-more" aria-label="More task options"><Icon name="dots" size={16}/></button></div>
+  return <div className="task-row"><button className={`task-check ${task.status === 'Completed' ? 'checked' : ''}`} disabled={lead || task.canComplete === false || task.status === 'Completed'} aria-label={`Mark ${task.title} complete`} onClick={() => !lead && onComplete(task.id)}>{task.status === 'Completed' && '✓'}</button><div className="task-copy"><strong>{task.title}</strong><span>{task.project}</span></div><div className="task-meta"><span className={`priority priority-${task.priority.toLowerCase()}`}><i/>{task.priority}</span><span className="due-date"><Icon name="clock" size={13}/>{task.due}</span></div><span className={statusClass(task.status)}>{task.status}</span><button className="row-more" aria-label="More task options"><Icon name="dots" size={16}/></button></div>
 }
 
 function RequirementsPage({ requirements, loading, lead = false }: { requirements: Requirement[]; loading: boolean; lead?: boolean }) {
