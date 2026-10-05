@@ -46,3 +46,15 @@ Official references: [OpenRouter quickstart](https://openrouter.ai/docs/quicksta
 ### Empty model responses
 
 Requests disable optional reasoning while retaining the 1,200-token cap. Models with mandatory reasoning may still exhaust that allowance before returning visible text. The handler accepts plain text and text-content blocks, never substitutes private reasoning for an answer, and distinguishes token exhaustion from content filtering. On repeated failures, inspect the corresponding OpenRouter Activity entry or select a fixed model without mandatory reasoning. No automatic retry or paid fallback is performed.
+
+## Lead-managed AI Knowledge
+
+Leads open **AI Knowledge** in the existing dashboard sidebar. Entries contain a title, plain-text content, audience (interns, leads, or both), publication state, and version. Save draft keeps guidance out of model context. Publish guidance includes it in new assistant requests for the same cohort and applicable audience. Unpublish stops future requests from using it; earlier answers and in-flight snapshots do not change retroactively. Editing an existing published entry offers explicit save-draft or publish choices.
+
+Supabase `ai_knowledge` RLS permits cohort leads to create/edit/read their cohort entries. Interns can only read published intern/both entries; they have no editing page or write permission. Anonymous access is revoked. The backend additionally filters publication and audience. System rules and live record dates override guidance text. Lead-managed guidance cannot enable external actions or change permissions.
+
+A database trigger stamps author/update IDs, timestamps, and monotonic versions. Updates match the loaded version to reject stale edits and retain text in the form after failure. This is version numbering and conflict prevention, not a historical revision archive.
+
+The assistant uses the eight most recently updated applicable published entries, with up to 3,000 characters each. Longer content or additional entries marks the snapshot partial. No handbook facts are seeded automatically: leads supply approved content. Use short, focused FAQs for the demo. 
+
+Database test: `backend/supabase/tests/knowledge.sql` uses isolated rollback-only fixtures. Migration: `backend/supabase/migrations/20261005165804_ai_knowledge.sql`.

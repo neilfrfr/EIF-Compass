@@ -7,6 +7,7 @@ import AuthGate from './AuthGate'
 import WorkManager from './WorkManager'
 import Dashboard from './Dashboard'
 import Assistant from './Assistant'
+import Knowledge from './Knowledge'
 
 type IconName = 'home' | 'tasks' | 'check' | 'calendar' | 'bell' | 'search' | 'chevron' | 'arrow' | 'clock' | 'spark' | 'trend' | 'users' | 'flag' | 'plus' | 'dots' | 'lock' | 'close'
 
@@ -111,7 +112,8 @@ export function Workspace({ session }: { session: Session }) {
     { id: 'calendar', label: 'Calendar', icon: 'calendar' },
     { id: 'assistant', label: 'AI assistant', icon: 'spark' },
   ]
-  const heading = view === 'overview' ? 'Overview' : view === 'work' ? (role === 'lead' ? 'Cohort tasks' : 'My work') : view === 'requirements' ? 'Requirements' : view === 'assistant' ? 'AI assistant' : 'Calendar'
+  if(role==='lead')activeNav.push({id:'knowledge',label:'AI Knowledge',icon:'check'})
+  const heading = view === 'overview' ? 'Overview' : view === 'work' ? (role === 'lead' ? 'Cohort tasks' : 'My work') : view === 'requirements' ? 'Requirements' : view === 'assistant' ? 'AI assistant' : view === 'knowledge' ? 'AI Knowledge' : 'Calendar'
   const displayName = profile?.display_name || 'EIF Fellow'
 
   async function signOut() {
@@ -155,7 +157,7 @@ export function Workspace({ session }: { session: Session }) {
             <div className="heading-actions"><span className="data-pill">{role === 'lead' ? 'Lead workspace' : 'Intern workspace'}</span><button className="text-button" onClick={() => setRevision(value => value + 1)}>Refresh workspace</button><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? 'Profile verified' : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
           </div>
 
-          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={setView}/> : view === 'assistant' ? <Assistant key={`${session.user.id}:${role}:${profile.cohort_id}`} client={supabase} role={role} cohortId={profile.cohort_id} onNavigate={setView}/> : <WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
+          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={setView}/> : view === 'knowledge' ? <Knowledge client={supabase} role={role} cohortId={profile.cohort_id}/> : view === 'assistant' ? <Assistant key={`${session.user.id}:${role}:${profile.cohort_id}`} client={supabase} role={role} cohortId={profile.cohort_id} onNavigate={setView}/> : <WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
 
           <footer className="page-footer"><span>EIF COMPASS <span className="footer-sep">·</span> FELLOWSHIP COHORT 2026</span><span>Small steps, meaningful progress.</span></footer>
         </div>

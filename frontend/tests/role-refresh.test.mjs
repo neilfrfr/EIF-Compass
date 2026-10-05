@@ -5,11 +5,11 @@ import React,{act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {JSDOM} from 'jsdom'
 mkdirSync('.test-output',{recursive:true})
-for(const name of ['Assistant','App','AuthGate','WorkManager','Dashboard','dashboard','data']){
+for(const name of ['Knowledge','Assistant','App','AuthGate','WorkManager','Dashboard','dashboard','data']){
 let content=ts.transpileModule(readFileSync(`src/${name}.${['data','dashboard'].includes(name)?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
-content=content.replace("import './assistant.css';",'')
+content=content.replace("import './assistant.css';",'').replace("import './knowledge.css';",'')
 content=content.replaceAll("'./lib/supabase'","'./test-client.js'")
-for(const dep of ['Assistant','AuthGate','WorkManager','Dashboard','dashboard','data'])content=content.replaceAll(`'./${dep}'`,`'./${dep}.js'`)
+for(const dep of ['Knowledge','Assistant','AuthGate','WorkManager','Dashboard','dashboard','data'])content=content.replaceAll(`'./${dep}'`,`'./${dep}.js'`)
 writeFileSync(`.test-output/${name}.js`,content)
 }
 let role='intern',fail=false

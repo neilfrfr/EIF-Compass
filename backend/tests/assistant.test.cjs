@@ -21,6 +21,7 @@ const mockFetch=async(url,options)=>{
  if(String(url).includes('/cohorts?'))return response([{id:'cohort-a',name:'Cohort A'}]);
  if(String(url).includes('/tasks?'))return response([{id:'task-a',title:'Reflection',assignee_id:'intern-a',status:'to_do',due_date:'2026-10-01'},{id:'task-b',title:'private-other-intern',assignee_id:'intern-b',status:'to_do'}]);
  if(String(url).includes('/requirements?'))return response([]);
+ if(String(url).includes('/ai_knowledge?'))return response([]);
  if(String(url).includes('/events?'))return response([]);
  if(String(url).includes('/requirement_submissions?'))return response([]);
  throw new Error('Unexpected URL '+url);

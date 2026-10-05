@@ -130,3 +130,7 @@ The login and role dashboards use a teal, sage, and white palette derived from t
 The AI assistant supports intern daily plans and requirement/check-in guidance, and lead cohort briefings, review summaries, and communication drafts. A server-side OpenRouter endpoint verifies Supabase sessions and fetches permitted records under RLS. Email and calendar suggestions are drafts only; Google execution is not connected yet.
 
 Set server-only `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY` in root `.env.local` locally and Vercel Environment Variables when deployed. Never use a `VITE_` prefix for the OpenRouter key. Run `npm run dev:api` alongside `npm run dev` locally. See [assistant framework and setup](docs/ai/assistant-framework.md) for limits, data handling, prompts, and planned Google integration.
+
+### AI Knowledge editor
+
+Cohort leads can manage reference guidance through **AI Knowledge** in the dashboard sidebar. Create FAQs or fellowship instructions, choose an audience, save drafts, publish, preview, edit, or unpublish. The assistant fetches applicable published guidance on each new request. Interns cannot edit entries or read drafts/lead-only guidance. Supabase RLS enforces cohort isolation and version checks prevent stale edits from overwriting newer work. See [assistant framework](docs/ai/assistant-framework.md) for context limits and database verification.
