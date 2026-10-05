@@ -60,3 +60,7 @@ Share repository access and Supabase organization invitations using each develop
 A dedicated sign-in page now gates the dashboard. Session restoration shows a loading screen; sign-out unmounts the workspace. There is no public demo bypass. The client gate controls presentation while Supabase RLS controls database access.
 
 Validation: TypeScript and production build passed. Simulated component tests passed for the loading gate, signed-out login, invalid and successful sign-in, sign-out unmounting, restored sessions, stale initial-session races, and missing configuration. These are local mocked checks, not live account or RLS verification. Browser visual checks were blocked by an unavailable Chromium executable and failed browser download.
+
+## Repository organization
+
+The React application lives in `frontend/`; the existing database schema is now `backend/supabase/schema.sql`. Root npm commands forward to the frontend, and `vercel.json` publishes `frontend/dist` from a repository-root build. Local frontend configuration belongs in `frontend/.env.local`. This is a file reorganization, not a database migration or a new API service.

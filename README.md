@@ -2,6 +2,18 @@
 
 EIF Compass gives Eskwelabs Innovation Fellowship interns one workspace for tasks, requirements, and upcoming events, with a cohort view for fellowship leads.
 
+## Repository structure
+
+| Path | Responsibility |
+| --- | --- |
+| `frontend/` | React UI, login gate, browser Supabase client, Vite/TypeScript configuration, and frontend dependencies |
+| `backend/supabase/` | PostgreSQL schema, auth profile trigger, RLS policies, and sample seed records |
+| `docs/` | Check-in handoff and repository ruleset documentation |
+| `package.json` | Root convenience commands that forward to the frontend |
+| `vercel.json` | Root deployment configuration for the frontend build |
+
+The current backend runs on Supabase. There is no separate FastAPI or AI service yet. See [frontend setup](frontend/README.md) and [backend setup](backend/README.md).
+
 ## Check-in 1 status — October 5, 2026
 
 This is a foundation prototype for the fellowship tracker. Vercel deployment and successful Supabase login were reported by the project owner. Role access and task persistence still need end-to-end verification before presenting them as tested.
@@ -23,13 +35,15 @@ See [the Check-in 1 handoff](docs/check-in-1.md) for testing and presentation st
 
 ```bash
 npm ci
-cp .env.example .env.local
+cp frontend/.env.example frontend/.env.local
 npm run dev
 ```
 
 The app opens on a dedicated email/password login page. The dashboard is mounted only after session restoration or successful sign-in. Signed-out visitors cannot open the dashboard or switch demo roles. Sign-out returns to the login page. Without Supabase configuration, sign-in stays unavailable; the dashboard does not fall back to a public demo.
 
-Fill in your local configuration to use live accounts:
+Root `npm ci` installs frontend dependencies through the `postinstall` script. You can also run `npm ci` and the frontend scripts directly inside `frontend/`.
+
+Fill in `frontend/.env.local` to use live accounts:
 
 ```env
 VITE_SUPABASE_URL=<your-project-url>
@@ -40,7 +54,7 @@ The client also accepts `VITE_SUPABASE_ANON_KEY` for compatibility. Use the publ
 
 ## Supabase setup
 
-1. Run [supabase/schema.sql](supabase/schema.sql) in your project's SQL Editor. It creates the tables, profile trigger, access policies, and sample cohort requirements/events.
+1. Run [backend/supabase/schema.sql](backend/supabase/schema.sql) in your project's SQL Editor. It creates the tables, profile trigger, access policies, and sample cohort requirements/events.
 2. Create a test account under **Authentication → Users** after installing the schema. New users receive an `intern` profile and the first cohort.
 3. If a user existed before the schema was installed, add their profile using their Auth user ID and the appropriate cohort ID.
 4. In **Table Editor → profiles**, set `role` to `intern` or `lead`, and assign `cohort_id` and an optional `team_name`. Sign out and back in after changing roles.
@@ -53,7 +67,7 @@ Authenticated accounts load records allowed by the database policies. Interns ca
 
 ## Vercel deployment
 
-1. Merge the integration changes into the branch configured for deployment.
+1. Merge the changes into the branch configured for deployment. Keep the Vercel **Root Directory** at the repository root (`.`). The committed `vercel.json` installs through the root package, runs `npm run build`, and publishes `frontend/dist`.
 2. Open the Vercel project's **Settings → Environment Variables**.
 3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` for the intended Production and Preview environments.
 4. Redeploy a build containing the integration changes. Vite reads these variables at build time.
@@ -65,7 +79,7 @@ Vercel Connect OAuth credentials are not required for this client integration.
 
 Invite collaborators through the Supabase organization's **Settings → Team** using their own accounts. A Developer role is suitable for database work; broader settings changes require suitable additional permissions. Dashboard membership is separate from an EIF Compass account used to test intern/lead behavior.
 
-Keep passwords, user emails, secret/service-role keys, database connection strings, and private account IDs out of commits, screenshots, issues, and PR descriptions. Configure local values in ignored `.env.local` files and hosted values in Vercel. Publishable keys are browser-facing, but example files use placeholders for portability. Never put privileged keys in a `VITE_` variable.
+Keep passwords, user emails, secret/service-role keys, database connection strings, and private account IDs out of commits, screenshots, issues, and PR descriptions. Configure local values in ignored `frontend/.env.local` files and hosted values in Vercel. Publishable keys are browser-facing, but example files use placeholders for portability. Never put privileged keys in a `VITE_` variable.
 
 ## Build and validation
 
