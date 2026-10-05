@@ -12,24 +12,51 @@ EIF Compass gives Eskwelabs Innovation Fellowship interns one workspace for task
 | `package.json` | Root convenience commands that forward to the frontend |
 | `vercel.json` | Root deployment configuration for the frontend build |
 
-The current backend runs on Supabase. There is no separate FastAPI or AI service yet. See [frontend setup](frontend/README.md) and [backend setup](backend/README.md).
+The current backend uses Supabase for database authorization and a Vercel serverless endpoint for the OpenRouter assistant. There is no separate FastAPI/Render service. See [frontend setup](frontend/README.md) and [backend setup](backend/README.md).
 
-## Check-in 1 status — October 5, 2026
+## Check-in 1 status — October 6, 2026
 
-This is a foundation prototype for the fellowship tracker. Vercel deployment and successful Supabase login were reported by the project owner. Role access and task persistence still need end-to-end verification before presenting them as tested.
+Checkpoint: October 7. The foundation is largely implemented, with some Week 2 workflows and the assistant already built. The deployed lead/intern walkthrough and realistic demo dataset still need verification. This is not yet the complete Demo Day MVP.
 
 | Area | Current status |
 | --- | --- |
-| Frontend | React/TypeScript application; Vercel deployment reported complete |
-| Authentication | Supabase email/password sign-in; successful login reported |
-| Intern workspace | Task, requirement, and event views with database queries |
-| Lead workspace | Cohort task and requirement queries; summary metrics and fellow list use sample data |
-| Task completion | Database update implemented; refresh/persistence test pending |
-| Access control | Cohort/assignee RLS policies included in the schema; isolation test pending |
-| AI support | Planned; current suggestions are static |
-| Requirement submission/review | Not implemented; requirements are read-only in the app |
+| Authentication and roles | Email/password login, session restoration, sign-out, profile role loading, and database RLS implemented |
+| Intern dashboard | Database-backed task completion, requirement status, overdue work, upcoming events, and deadline-based next action |
+| Lead dashboard | Database-backed cohort/team counts, task progress, review queue, overdue work, and intern drill-down; blocker list missing |
+| Task management | Lead create/edit/remove; intern assigned-task status updates; text search; sprint linkage and due-date/priority/status/sprint filters missing |
+| Requirements | Instructions, individual submission links, lead approval/request changes, and computed overdue status implemented |
+| Calendar | Cohort events displayed in Philippine time; requirement deadlines are not yet combined into the agenda |
+| Assistant | Server-side OpenRouter with verified Supabase sessions and permission-filtered context; real-provider accuracy/safety test and streaming pending |
+| Projects, feedback, blockers, notifications | Dedicated P0 workflows not implemented |
+| Demo data | Base seed contains a cohort and sample requirements/events; the planned ~20 interns, 5 teams, and 2 sprints need preparation |
+| Validation | Component/API tests and production builds passed in prior implementation checks; live database workflow/permission tests passed with rolled-back fixtures; deployed browser walkthrough remains pending |
 
-See [the Check-in 1 handoff](docs/check-in-1.md) for testing and presentation steps.
+### Remaining committed MVP work
+
+This checklist follows the supplied PRD's P0 requirements. Implemented portions are listed above; partial items below must be completed before calling the MVP done.
+
+- [ ] **AUTH-1 / team access:** verify deployed role/cohort isolation and implement permitted team data access alongside the project model; current intern access is own assigned and shared cohort records.
+- [ ] **TASK-1 / TASK-2:** add project/sprint relationships and filters for due date, sprint, priority, and status.
+- [ ] **CAL-1:** combine fellowship events and requirement deadlines in a chronological agenda.
+- [ ] **PROJ-1 / DASH-1:** team/project page, current sprint/milestone, milestone timeline, and derived project progress.
+- [ ] **FDBK-1:** lead feedback per sprint and intern feedback history.
+- [ ] **BLK-1 / LEAD-1:** intern blocker reports with category/description, lead comments/resolution, and lead blocker list.
+- [ ] **NOTIF-1:** in-app notices for deadlines, overdue work, new feedback, and task assignment, with mark-as-read.
+- [ ] **DASH-2:** complete deterministic Next Best Action (overdue, nearest deadline, then blocked milestone), suggestion label, reason/due date, and AI explanation while preserving the rule-based fallback.
+- [ ] **AI-1:** include permitted feedback once available; explicitly prohibit grading, ranking/scoring/penalizing interns and pass/fail decisions; verify refusals and grounding; add streaming to meet the PRD's response requirement.
+- [ ] **Demo and QA:** realistic seeded cohort, deployed end-to-end role/persistence tests, 20-question AI test (at least 90% accuracy and zero evaluative outputs), 3–5 user usability test (at least 80% identify next priority within 30 seconds), dashboard load under 3 seconds, keyboard/mobile checks, two rehearsals and backup recording.
+
+### Scope and checkpoints
+
+- **October 7:** demonstrate sign-in by role, database-backed intern dashboard and requirements, sample records, and confirm the remaining P0 plan.
+- **October 14:** complete all non-AI P0 workflows and deterministic ranking; review assistant readiness.
+- **October 21:** demonstrate the tested P0 MVP. Freeze and rehearse by October 20.
+
+Freeze additional features until the missing P0 workflows are complete. AI Knowledge (closed, unmerged PR #10), Google Calendar/email execution, announcements, exports, and further AI cohort-summary work are deferred. Existing email/calendar assistant outputs are drafts only. P1 feedback summaries, approve-to-create tasks, and month/week calendars are optional after P0.
+
+The implementation deliberately uses Supabase RLS and Vercel functions instead of the proposed FastAPI/Render stack. Database checks enforce authorization; document this architecture choice rather than treating the proposed stack as completed.
+
+See [workflow verification](docs/lead-intern-workflows.md) and [dashboard definitions](docs/dashboard-metrics.md). The older [Check-in 1 handoff](docs/check-in-1.md) records the initial foundation and contains historical scope statements; this README is the current status.
 
 ## Local development
 
@@ -88,16 +115,7 @@ npm run build
 npm run preview
 ```
 
-The integration's TypeScript check and Vite production build passed on October 5, 2026. Automated live Supabase verification was blocked by a connection timeout; successful app login was subsequently reported by the project owner.
-
-## Next development phase
-
-- Live lead analytics and fellow progress.
-- Requirement submission links and lead review.
-- In-app task and account administration.
-- AI assistance and contextual reminders; FastAPI/OpenRouter remain planned integrations.
-
-The seeded names and sample progress are demonstration data, not real intern records.
+Prior implementation checks passed the component/API tests, TypeScript check, Vite production build, and live Supabase workflow/permission regression suite. Database fixtures were rolled back. These results do not establish a successful deployed browser walkthrough or real-model accuracy test. Run `npm test` and `npm run build` for the checked-out revision; see the SQL tests under `backend/supabase/tests/`.
 
 ## Lead and intern workflows
 
