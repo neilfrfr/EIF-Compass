@@ -15,7 +15,11 @@ Choose **Fellow** or **Lead** in the top-right role preview to switch between th
 
 ## Connect Supabase
 
-1. Copy `.env.example` to `.env.local` and add the project's Supabase URL and anon key.
+1. Copy `.env.example` to `.env.local` and use the included project URL and publishable key. The app accepts `VITE_SUPABASE_PUBLISHABLE_KEY` and also supports the legacy `VITE_SUPABASE_ANON_KEY` variable.
+   ```bash
+   cp .env.example .env.local
+   ```
+
 2. Run [`supabase/schema.sql`](supabase/schema.sql) in the Supabase SQL Editor.
 3. Create test users in Supabase Auth. The profile trigger creates each new account as an intern and assigns the first cohort.
 4. To designate a lead or assign a fellow to a team, update that user's `profiles` row in the Supabase dashboard. Do not expose the service-role key in the browser.
@@ -45,3 +49,9 @@ npm run preview
 4. Switch to Lead and show the cohort pulse, team progress, and follow-up prompt. The lead dashboard's cohort summary uses clearly labeled sample data until lead analytics are wired to Supabase queries.
 
 The seeded names and sample progress are for demonstration and are not real intern records.
+
+## Deployment configuration
+
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from `.env.example` in your hosting provider, then rebuild/redeploy. Vite reads these values at build time. The publishable key is intended for browser use; database access is restricted by the policies in `supabase/schema.sql`. Keep secret and service-role keys out of all `VITE_` variables.
+
+If users existed before the schema was installed, create their `profiles` rows in the Supabase dashboard using their Auth user IDs and the seeded cohort ID. The trigger only creates profiles for new accounts. Enable the email/password provider in Authentication, create a test account after running the schema, then use **Connect account**. Verify that completing an assigned task persists after reloading and that signing out restores the demo.
