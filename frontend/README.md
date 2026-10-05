@@ -29,4 +29,4 @@ Output is `frontend/dist` relative to the repository root. The production Vercel
 
 `src/lib/supabase.ts` is a browser client and belongs here. It calls Supabase Auth and the Data API; database schema and policies are in [../backend/supabase/schema.sql](../backend/supabase/schema.sql). The login gate controls UI visibility and database RLS controls access to records.
 
-AI suggestions and lead summary metrics still include static/sample content. See [the handoff](../docs/check-in-1.md).
+Dashboard.tsx loads permitted cohort records; dashboard.ts derives task completion, individual requirement statuses, overdue work, review queues, teams, and date-based suggestions. Lead and intern overviews have different layouts. Suggestions use deadline rules; an AI assistant and blocker-based ranking are not implemented.

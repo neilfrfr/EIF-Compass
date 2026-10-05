@@ -110,3 +110,11 @@ For an existing database, apply `backend/supabase/migrations/20261005_lead_workf
 Verification: `npm test` runs component interaction tests; `npm run build` checks TypeScript and the production build. Frontend tests require Node 24.19+ (jsdom 30). The SQL regression suite in `backend/supabase/tests/workflows.sql` creates isolated fixtures, exercises authenticated roles, and rolls back all fixture data.
 
 See `docs/lead-intern-workflows.md` for usage and verification limitations.
+
+## Database-backed dashboards
+
+The intern overview shows assigned-task completion, personal requirement approval/review status, overdue work, deadline-based next actions and future cohort events. Shared view-only tasks are excluded from personal task completion.
+
+The lead overview shows actual intern/team counts, cohort task completion, a submission review queue, overdue work, team task progress and individual intern drill-down. Shared requirements count once per eligible intern, with individual submissions overriding the original requirement status. Existing requirement statuses are retained as legacy fallback where no individual submission exists.
+
+The fellowship week comes from cohort dates; percentages represent recorded task completion. Missing data produces explicit empty states, not sample metrics. Deadline suggestions prioritize overdue work and then nearest deadlines; blocker ranking and model-generated explanations remain future work. No seed records or database schema changes are introduced by this dashboard update.

@@ -5,10 +5,10 @@ import React,{act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {JSDOM} from 'jsdom'
 mkdirSync('.test-output',{recursive:true})
-for(const name of ['App','AuthGate','WorkManager','data']){
-let content=ts.transpileModule(readFileSync(`src/${name}.${name==='data'?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
+for(const name of ['App','AuthGate','WorkManager','Dashboard','dashboard','data']){
+let content=ts.transpileModule(readFileSync(`src/${name}.${['data','dashboard'].includes(name)?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 content=content.replaceAll("'./lib/supabase'","'./test-client.js'")
-for(const dep of ['AuthGate','WorkManager','data'])content=content.replaceAll(`'./${dep}'`,`'./${dep}.js'`)
+for(const dep of ['AuthGate','WorkManager','Dashboard','dashboard','data'])content=content.replaceAll(`'./${dep}'`,`'./${dep}.js'`)
 writeFileSync(`.test-output/${name}.js`,content)
 }
 let role='intern',fail=false
@@ -24,7 +24,7 @@ await act(async()=>root.render(React.createElement(Workspace,{session})))
 assert.match(document.body.textContent,/YOUR FELLOWSHIP JOURNEY/)
 role='lead'
 await act(async()=>window.dispatchEvent(new window.Event('focus')))
-assert.match(document.body.textContent,/SAMPLE COHORT PULSE/,'Role must refresh from database on window focus')
+assert.match(document.body.textContent,/COHORT COMMAND CENTER/,'Role must refresh from database on window focus')
 fail=true
 await act(async()=>window.dispatchEvent(new window.Event('focus')))
 assert.ok(!document.body.textContent.includes('YOUR FELLOWSHIP JOURNEY'),'Profile failures must not fall back to intern')

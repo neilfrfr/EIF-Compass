@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "node tests/workflows.test.mjs && node tests/role-refresh.test.mjs"
+    "test": "node tests/workflows.test.mjs && node tests/dashboard.test.mjs && node tests/dashboard-ui.test.mjs && node tests/role-refresh.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
