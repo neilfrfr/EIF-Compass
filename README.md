@@ -1,57 +1,86 @@
 # EIF Compass
 
-EIF Compass is a fellowship tracking and support workspace for EIF interns and leads. This Check-in 1 build focuses on the foundation: a polished intern dashboard, task and requirement views, a cohort lead view, Supabase Auth, and Supabase-backed records with row-level security.
+EIF Compass gives Eskwelabs Innovation Fellowship interns one workspace for tasks, requirements, and upcoming events, with a cohort view for fellowship leads.
 
-## Run the demo
+## Check-in 1 status — October 5, 2026
 
-The app opens with sample cohort data, so the screens can be presented before real accounts and records are ready.
+This is a foundation prototype for the fellowship tracker. Vercel deployment and successful Supabase login were reported by the project owner. Role access and task persistence still need end-to-end verification before presenting them as tested.
+
+| Area | Current status |
+| --- | --- |
+| Frontend | React/TypeScript application; Vercel deployment reported complete |
+| Authentication | Supabase email/password sign-in; successful login reported |
+| Intern workspace | Task, requirement, and event views with database queries |
+| Lead workspace | Cohort task and requirement queries; summary metrics and fellow list use sample data |
+| Task completion | Database update implemented; refresh/persistence test pending |
+| Access control | Cohort/assignee RLS policies included in the schema; isolation test pending |
+| AI support | Planned; current suggestions are static |
+| Requirement submission/review | Not implemented; requirements are read-only in the app |
+
+See [the Check-in 1 handoff](docs/check-in-1.md) for testing and presentation steps.
+
+## Local development
 
 ```bash
-npm install
+npm ci
+cp .env.example .env.local
 npm run dev
 ```
 
-Choose **Fellow** or **Lead** in the top-right role preview to switch between the two demo experiences. In demo mode, task completion is kept in local page state only.
+The app opens with sample data when signed out. Use the **Fellow / Lead** selector to preview demo views. Demo task completion is local page state and does not persist.
 
-## Connect Supabase
+Fill in your local configuration to use live accounts:
 
-1. Copy `.env.example` to `.env.local` and use the included project URL and publishable key. The app accepts `VITE_SUPABASE_PUBLISHABLE_KEY` and also supports the legacy `VITE_SUPABASE_ANON_KEY` variable.
-   ```bash
-   cp .env.example .env.local
-   ```
+```env
+VITE_SUPABASE_URL=<your-project-url>
+VITE_SUPABASE_PUBLISHABLE_KEY=<your-publishable-key>
+```
 
-2. Run [`supabase/schema.sql`](supabase/schema.sql) in the Supabase SQL Editor.
-3. Create test users in Supabase Auth. The profile trigger creates each new account as an intern and assigns the first cohort.
-4. To designate a lead or assign a fellow to a team, update that user's `profiles` row in the Supabase dashboard. Do not expose the service-role key in the browser.
-5. Add tasks in `public.tasks` and assign them to a profile. The seeded shared requirements and events are visible to members of the cohort.
-6. Use **Connect account** in the sidebar to sign in with an existing Supabase email/password account.
+The client also accepts `VITE_SUPABASE_ANON_KEY` for compatibility. Use the publishable-key variable for new configuration. Get the values from your Supabase project; this repository intentionally contains no project-specific values.
 
-Authenticated users load tasks and requirements from Supabase. Fellows only read records allowed by RLS and can update the `status` column on their own tasks. Leads can read profiles and records in their cohort. This first slice keeps requirement updates read-only; a later milestone can add submission links and lead review actions.
+## Supabase setup
 
-## Stack
+1. Run [supabase/schema.sql](supabase/schema.sql) in your project's SQL Editor. It creates the tables, profile trigger, access policies, and sample cohort requirements/events.
+2. Create a test account under **Authentication → Users** after installing the schema. New users receive an `intern` profile and the first cohort.
+3. If a user existed before the schema was installed, add their profile using their Auth user ID and the appropriate cohort ID.
+4. In **Table Editor → profiles**, set `role` to `intern` or `lead`, and assign `cohort_id` and an optional `team_name`. Sign out and back in after changing roles.
+5. Add a task in `public.tasks`, using the user's profile ID as `assignee_id` and the matching `cohort_id`.
+6. Click **Connect account** in the app and sign in.
 
-- React 19, TypeScript, Vite, Tailwind CSS 4, and custom CSS for the branded dashboard.
-- Supabase Auth and PostgreSQL with row-level security.
-- Supabase JavaScript client for the current Check-in 1 read path; the FastAPI service and OpenRouter assistant remain later integration work.
+Cohort IDs remain UUIDs. A human-readable label belongs in the cohort's `name`; keep related IDs consistent.
 
-## Build
+Authenticated accounts load records allowed by the database policies. Interns can update the status of their assigned tasks. Leads can read cohort records. Signed-in query failures are reported instead of retaining sample records, and task completion checks whether a record was actually updated.
+
+## Vercel deployment
+
+1. Merge the integration changes into the branch configured for deployment.
+2. Open the Vercel project's **Settings → Environment Variables**.
+3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` for the intended Production and Preview environments.
+4. Redeploy a build containing the integration changes. Vite reads these variables at build time.
+5. Open the deployment, sign in, and complete the [verification checklist](docs/check-in-1.md#verification-checklist).
+
+Vercel Connect OAuth credentials are not required for this client integration.
+
+## Developer collaboration
+
+Invite collaborators through the Supabase organization's **Settings → Team** using their own accounts. A Developer role is suitable for database work; broader settings changes require suitable additional permissions. Dashboard membership is separate from an EIF Compass account used to test intern/lead behavior.
+
+Keep passwords, user emails, secret/service-role keys, database connection strings, and private account IDs out of commits, screenshots, issues, and PR descriptions. Configure local values in ignored `.env.local` files and hosted values in Vercel. Publishable keys are browser-facing, but example files use placeholders for portability. Never put privileged keys in a `VITE_` variable.
+
+## Build and validation
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Check-in 1 demo path
+The integration's TypeScript check and Vite production build passed on October 5, 2026. Automated live Supabase verification was blocked by a connection timeout; successful app login was subsequently reported by the project owner.
 
-1. Start on the Fellow overview and show the next-best-action card, progress, active tasks, requirements, and upcoming events.
-2. Open Requirements and filter by status.
-3. Mark a demo task complete to show the interaction.
-4. Switch to Lead and show the cohort pulse, team progress, and follow-up prompt. The lead dashboard's cohort summary uses clearly labeled sample data until lead analytics are wired to Supabase queries.
+## Next development phase
 
-The seeded names and sample progress are for demonstration and are not real intern records.
+- Live lead analytics and fellow progress.
+- Requirement submission links and lead review.
+- In-app task and account administration.
+- AI assistance and contextual reminders; FastAPI/OpenRouter remain planned integrations.
 
-## Deployment configuration
-
-Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from `.env.example` in your hosting provider, then rebuild/redeploy. Vite reads these values at build time. The publishable key is intended for browser use; database access is restricted by the policies in `supabase/schema.sql`. Keep secret and service-role keys out of all `VITE_` variables.
-
-If users existed before the schema was installed, create their `profiles` rows in the Supabase dashboard using their Auth user IDs and the seeded cohort ID. The trigger only creates profiles for new accounts. Enable the email/password provider in Authentication, create a test account after running the schema, then use **Connect account**. Verify that completing an assigned task persists after reloading and that signing out restores the demo.
+The seeded names and sample progress are demonstration data, not real intern records.
