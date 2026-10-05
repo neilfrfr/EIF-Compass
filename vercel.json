@@ -3,5 +3,10 @@
   "framework": "vite",
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
-  "outputDirectory": "frontend/dist"
+  "outputDirectory": "frontend/dist",
+  "functions": {
+    "api/assistant.js": {
+      "maxDuration": 60
+    }
+  }
 }
