@@ -45,8 +45,8 @@ export default function App() {
   return <AuthGate>{session => <Workspace key={session.user.id} session={session}/>}</AuthGate>
 }
 
-function Workspace({ session }: { session: Session }) {
-  const [role, setRole] = useState<Role>('intern')
+export function Workspace({ session }: { session: Session }) {
+  const [role, setRole] = useState<Role | null>(null)
   const [view, setView] = useState<View>('overview')
   const [tasks, setTasks] = useState<Task[]>([])
   const [requirements, setRequirements] = useState<Requirement[]>([])
@@ -58,6 +58,15 @@ function Workspace({ session }: { session: Session }) {
   const [toast, setToast] = useState('')
   const [search, setSearch] = useState('')
   const [revision, setRevision] = useState(0)
+  const [workspaceError, setWorkspaceError] = useState('')
+
+  useEffect(() => {
+    const refresh = () => setRevision(value => value + 1)
+    const visible = () => { if (document.visibilityState === 'visible') refresh() }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', visible)
+    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', visible) }
+  }, [])
 
   useEffect(() => {
     const navigate = (event: Event) => {
@@ -86,6 +95,7 @@ function Workspace({ session }: { session: Session }) {
         return
       }
       setLoadingData(true)
+      setWorkspaceError('')
       setConnected(false)
       setTasks([])
       setRequirements([])
@@ -96,7 +106,8 @@ function Workspace({ session }: { session: Session }) {
         if (profileError) throw profileError
         if (!profileData) throw new Error('Your fellowship profile is missing. Ask your lead to finish your account setup.')
         setProfile(profileData)
-        setRole(profileData?.role === 'lead' ? 'lead' : 'intern')
+        if (profileData.role !== 'lead' && profileData.role !== 'intern') throw new Error('Your profile has an unsupported role. Contact your fellowship lead.')
+        setRole(profileData.role)
 
         let requirementsQuery = supabase.from('requirements').select('id,title,description,due_date,status,assignee_id').order('due_date')
         if (profileData?.role !== 'lead') requirementsQuery = requirementsQuery.or(`assignee_id.is.null,assignee_id.eq.${session.user.id}`)
@@ -148,7 +159,9 @@ function Workspace({ session }: { session: Session }) {
         setTasks([])
         setRequirements([])
         setEvents([])
-        setToast(error instanceof Error ? error.message : 'Could not load your workspace. Check that the Supabase schema and permissions are configured.')
+        setRole(null)
+        setProfile(null)
+        setWorkspaceError(error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Could not load your workspace. Check that the Supabase schema and permissions are configured.')
       } finally {
         if (active) setLoadingData(false)
       }
@@ -193,6 +206,8 @@ function Workspace({ session }: { session: Session }) {
     window.setTimeout(() => setToast(''), 2600)
   }
 
+  if (role === null) return <main className="login-page login-checking"><section className="login-card"><h1>{loadingData ? 'Loading your workspace…' : 'Workspace unavailable'}</h1>{workspaceError && <p role="alert">{workspaceError}</p>}{!loadingData && <div className="manager-actions"><button className="primary-button" onClick={() => setRevision(value => value + 1)}>Retry</button><button className="text-button" onClick={() => void signOut()}>Sign out</button></div>}</section></main>
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -221,7 +236,7 @@ function Workspace({ session }: { session: Session }) {
         <div className="page-wrap">
           <div className="page-heading">
             <div><div className="eyebrow">{new Date().toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()} <span className="eyebrow-line"/></div><h1>{view === 'overview' ? `Good morning, ${displayName.split(' ')[0]}.` : heading}<span className="heading-period">{view === 'overview' ? ' ✦' : ''}</span></h1><p>{role === 'lead' ? 'Here’s how your cohort is moving this week.' : 'A clear view of your fellowship, all in one place.'}</p></div>
-            <div className="heading-actions"><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? (role === 'lead' ? 'Live records · sample metrics' : 'Supabase connected') : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
+            <div className="heading-actions"><span className="data-pill">{role === 'lead' ? 'Lead workspace' : 'Intern workspace'}</span><button className="text-button" onClick={() => setRevision(value => value + 1)}>Refresh workspace</button><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? (role === 'lead' ? 'Live records · sample metrics' : 'Supabase connected') : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
           </div>
 
           {view !== 'overview' && supabase && profile?.cohort_id ? <WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : role === 'intern' ? <InternContent view={view} tasks={tasks} requirements={filteredRequirements} events={events} completeTask={completeDemoTask} completeCount={completeCount} loading={loadingData}/> : <LeadContent view={view} fellows={fellows} requirements={filteredRequirements} tasks={tasks} events={events}/>}
