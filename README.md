@@ -124,3 +124,9 @@ The fellowship week comes from cohort dates; percentages represent recorded task
 Leads can remove tasks, requirements, and calendar events from their own cohort with an explicit confirmation. Removing a requirement also removes its linked submissions; cancellation makes no database change. Interns retain view, task status, and submission controls without deletion privileges. Supabase row-level policies enforce the same restrictions independently of the UI.
 
 The login and role dashboards use a teal, sage, and white palette derived from the supplied Eskwelabs screenshot, with larger controls and consistent focus states. The additive migration is `backend/supabase/migrations/20261005_lead_removal.sql`. Run `npm test` and `npm run build`; the database workflow test uses rollback-only fixtures.
+
+### AI fellowship assistant
+
+The AI assistant supports intern daily plans and requirement/check-in guidance, and lead cohort briefings, review summaries, and communication drafts. A server-side OpenRouter endpoint verifies Supabase sessions and fetches permitted records under RLS. Email and calendar suggestions are drafts only; Google execution is not connected yet.
+
+Set server-only `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY` in root `.env.local` locally and Vercel Environment Variables when deployed. Never use a `VITE_` prefix for the OpenRouter key. Run `npm run dev:api` alongside `npm run dev` locally. See [assistant framework and setup](docs/ai/assistant-framework.md) for limits, data handling, prompts, and planned Google integration.

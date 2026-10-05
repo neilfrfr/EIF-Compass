@@ -6,6 +6,7 @@ import { supabase } from './lib/supabase'
 import AuthGate from './AuthGate'
 import WorkManager from './WorkManager'
 import Dashboard from './Dashboard'
+import Assistant from './Assistant'
 
 type IconName = 'home' | 'tasks' | 'check' | 'calendar' | 'bell' | 'search' | 'chevron' | 'arrow' | 'clock' | 'spark' | 'trend' | 'users' | 'flag' | 'plus' | 'dots' | 'lock' | 'close'
 
@@ -108,8 +109,9 @@ export function Workspace({ session }: { session: Session }) {
     { id: 'work', label: role === 'lead' ? 'Cohort tasks' : 'My work', icon: 'tasks' },
     { id: 'requirements', label: 'Requirements', icon: 'check' },
     { id: 'calendar', label: 'Calendar', icon: 'calendar' },
+    { id: 'assistant', label: 'AI assistant', icon: 'spark' },
   ]
-  const heading = view === 'overview' ? 'Overview' : view === 'work' ? (role === 'lead' ? 'Cohort tasks' : 'My work') : view === 'requirements' ? 'Requirements' : 'Calendar'
+  const heading = view === 'overview' ? 'Overview' : view === 'work' ? (role === 'lead' ? 'Cohort tasks' : 'My work') : view === 'requirements' ? 'Requirements' : view === 'assistant' ? 'AI assistant' : 'Calendar'
   const displayName = profile?.display_name || 'EIF Fellow'
 
   async function signOut() {
@@ -131,7 +133,7 @@ export function Workspace({ session }: { session: Session }) {
         <div className="cohort-switch"><span className="cohort-dot"/><span>Fellowship workspace</span><Icon name="chevron" size={15}/></div>
         <div className="side-label">WORKSPACE</div>
         <nav className="side-nav" aria-label="Main navigation">
-          {activeNav.map(item => <button key={item.id} className={`nav-item ${view === item.id ? 'selected' : ''}`} onClick={() => setView(item.id)}><Icon name={item.icon}/><span>{item.label}</span></button>)}
+          {activeNav.map(item => <button key={item.id} aria-label={item.label} className={`nav-item ${view === item.id ? 'selected' : ''}`} onClick={() => setView(item.id)}><Icon name={item.icon}/><span>{item.label}</span></button>)}
         </nav>
         <div className="side-spacer"/>
         <button className="profile-card" onClick={() => void signOut()} title="Sign out" aria-label="Sign out"><div className="avatar avatar-lilac">{initials(displayName)}</div><div className="profile-info"><strong>{displayName}</strong><span>Sign out</span></div><Icon name="dots" size={16}/></button>
@@ -153,7 +155,7 @@ export function Workspace({ session }: { session: Session }) {
             <div className="heading-actions"><span className="data-pill">{role === 'lead' ? 'Lead workspace' : 'Intern workspace'}</span><button className="text-button" onClick={() => setRevision(value => value + 1)}>Refresh workspace</button><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? 'Profile verified' : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
           </div>
 
-          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={setView}/> : <WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
+          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={setView}/> : view === 'assistant' ? <Assistant key={`${session.user.id}:${role}:${profile.cohort_id}`} client={supabase} role={role} cohortId={profile.cohort_id} onNavigate={setView}/> : <WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
 
           <footer className="page-footer"><span>EIF COMPASS <span className="footer-sep">·</span> FELLOWSHIP COHORT 2026</span><span>Small steps, meaningful progress.</span></footer>
         </div>
