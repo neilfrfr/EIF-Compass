@@ -118,3 +118,9 @@ The intern overview shows assigned-task completion, personal requirement approva
 The lead overview shows actual intern/team counts, cohort task completion, a submission review queue, overdue work, team task progress and individual intern drill-down. Shared requirements count once per eligible intern, with individual submissions overriding the original requirement status. Existing requirement statuses are retained as legacy fallback where no individual submission exists.
 
 The fellowship week comes from cohort dates; percentages represent recorded task completion. Missing data produces explicit empty states, not sample metrics. Deadline suggestions prioritize overdue work and then nearest deadlines; blocker ranking and model-generated explanations remain future work. No seed records or database schema changes are introduced by this dashboard update.
+
+### Lead removal and visual refinement
+
+Leads can remove tasks, requirements, and calendar events from their own cohort with an explicit confirmation. Removing a requirement also removes its linked submissions; cancellation makes no database change. Interns retain view, task status, and submission controls without deletion privileges. Supabase row-level policies enforce the same restrictions independently of the UI.
+
+The login and role dashboards use a teal, sage, and white palette derived from the supplied Eskwelabs screenshot, with larger controls and consistent focus states. The additive migration is `backend/supabase/migrations/20261005_lead_removal.sql`. Run `npm test` and `npm run build`; the database workflow test uses rollback-only fixtures.

@@ -15,7 +15,7 @@ const root=createRoot(document.getElementById('root'))
 const calls=[]
 const fixtures={profiles:[{id:'intern-a',display_name:'Intern A',role:'intern',cohort_id:'cohort'}],tasks:[{id:'task-a',title:'Assigned task',assignee_id:'intern-a',cohort_id:'cohort',description:'Notes',project_name:'Compass',due_date:'2026-10-07',priority:'high',status:'to_do'},{id:'shared',title:'Shared task',assignee_id:null,cohort_id:'cohort',priority:'low',status:'to_do'}],requirements:[{id:'req-a',title:'Reflection',cohort_id:'cohort',due_date:'2026-10-04',status:'pending',assignee_id:null}],events:[{id:'event-a',title:'Check-in',starts_at:'2026-10-07T14:00:00+08:00',location:'Online',event_type:'Milestone'}],requirement_submissions:[]}
 let failWrite=false
-const client={from(table){const q={table,op:'read',payload:null,filters:[],select(){return this},order(){return this},eq(k,v){this.filters.push([k,v]);return this},insert(p){this.op='insert';this.payload=p;return this},update(p){this.op='update';this.payload=p;return this},upsert(p){this.op='upsert';this.payload=p;return this},then(resolve,reject){if(this.op!=='read')calls.push({table:this.table,op:this.op,payload:this.payload,filters:this.filters});return Promise.resolve(failWrite&&this.op!=='read'?{data:null,error:{message:'Save denied'}}:{data:this.op==='read'?fixtures[table]:[{id:'saved'}],error:null}).then(resolve,reject)}};return q}}
+const client={from(table){const q={table,op:'read',payload:null,filters:[],select(){return this},order(){return this},eq(k,v){this.filters.push([k,v]);return this},insert(p){this.op='insert';this.payload=p;return this},update(p){this.op='update';this.payload=p;return this},upsert(p){this.op='upsert';this.payload=p;return this},delete(){this.op='delete';return this},then(resolve,reject){if(this.op!=='read')calls.push({table:this.table,op:this.op,payload:this.payload,filters:this.filters});return Promise.resolve(failWrite&&this.op!=='read'?{data:null,error:{message:'Save denied'}}:{data:this.op==='read'?fixtures[table]:[{id:'saved'}],error:null}).then(resolve,reject)}};return q}}
 const render=async(role,view)=>act(async()=>{root.render(React.createElement(WorkManager,{client,role,view,userId:'intern-a',cohortId:'cohort',onChanged(){}}))})
 const click=async(text)=>act(async()=>{const button=[...document.querySelectorAll('button')].find(b=>b.textContent===text);assert.ok(button,`Missing ${text}`);button.click()})
 const submit=async()=>act(async()=>{document.querySelector('form').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}))})
@@ -31,7 +31,15 @@ await submit()
 assert.equal(calls.at(-1).payload.title,'New task')
 assert.equal(calls.at(-1).payload.cohort_id,'cohort')
 assert.equal(calls.at(-1).payload.assignee_id,'intern-a')
+await click('Remove')
+assert.ok(document.querySelector('[role="region"]'),'Removal confirmation missing')
+const beforeCancel=calls.length
+await click('Keep task');assert.equal(calls.length,beforeCancel)
+await click('Remove');await click('Remove task')
+assert.equal(calls.at(-1).op,'delete')
+assert.ok(calls.at(-1).filters.some(([k,v])=>k==='cohort_id'&&v==='cohort'))
 await render('intern','work')
+assert.ok(![...document.querySelectorAll('button')].some(b=>b.textContent==='Remove'))
 assert.ok(!document.body.textContent.includes('Add task'))
 const shared=[...document.querySelectorAll('article')].find(e=>e.textContent.includes('Shared task'))
 assert.ok(shared&&!shared.querySelector('select'),'Shared task must not be editable by intern')
@@ -66,5 +74,17 @@ await click('Add event');document.querySelector('[name="title"]').value='Retry e
 failWrite=true;await submit()
 assert.match(document.body.textContent,/Save denied/)
 assert.ok(document.querySelector('form'),'Failed save must retain form')
+failWrite=false
+for(const [view,singular,table] of [['requirements','requirement','requirements'],['calendar','event','events']]){
+ await render('lead',view);await click('Remove')
+ if(table==='requirements')assert.match(document.body.textContent,/submissions will also be removed/)
+ failWrite=true;await click(`Remove ${singular}`)
+ assert.ok(document.querySelector('[role="region"]'),'Failed removal must retain confirmation')
+ failWrite=false;await click(`Remove ${singular}`)
+ assert.equal(calls.at(-1).op,'delete');assert.equal(calls.at(-1).table,table)
+ assert.ok(!document.querySelector('[role="region"]'))
+ await render('intern',view)
+ assert.ok(![...document.querySelectorAll('button')].some(b=>b.textContent==='Remove'))
+}
 await act(async()=>root.unmount())
 console.log('PASS: role controls, form validation, create payload, own task status, safe submission, error recovery')

@@ -30,11 +30,12 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
  const [error,setError]=useState('')
  const [notice,setNotice]=useState('')
  const [editor,setEditor]=useState<Editor|null>(null)
+ const [removing,setRemoving]=useState<RecordItem|null>(null)
  const [revision,setRevision]=useState(0)
  const [filter,setFilter]=useState('')
  useEffect(()=>{
   let active=true
-  setLoading(true);setError('');setEditor(null);setRecords([]);setSubmissions([]);setMembers([]);setFilter('')
+  setLoading(true);setError('');setEditor(null);setRemoving(null);setRecords([]);setSubmissions([]);setMembers([]);setFilter('')
   async function load(){
    try {
     const [result,people,submitted]=await Promise.all([
@@ -52,7 +53,7 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
  async function write(operation:()=>PromiseLike<{data:unknown;error:unknown}>,success:string){
   if(busy)return
   setBusy(true);setError('');setNotice('')
-  try{const result=await operation();if(result.error)throw result.error;if(!Array.isArray(result.data)||!result.data.length)throw new Error('No record was saved. Refresh and check your permissions.');setEditor(null);setNotice(success);setRevision(v=>v+1);onChanged()}catch(e){setError(message(e))}finally{setBusy(false)}
+  try{const result=await operation();if(result.error)throw result.error;if(!Array.isArray(result.data)||!result.data.length)throw new Error('No record was saved. Refresh and check your permissions.');setEditor(null);setRemoving(null);setNotice(success);setRevision(v=>v+1);onChanged()}catch(e){setError(message(e))}finally{setBusy(false)}
  }
  async function save(event:FormEvent<HTMLFormElement>){
   event.preventDefault();if(busy||!editor)return
@@ -85,7 +86,7 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
  const mine=(r:RecordItem)=>submissions.find(s=>s.requirement_id===r.id&&s.user_id===userId)
  function requirementStatus(r:RecordItem){const submitted=mine(r);const state=submitted?.status||r.status||'pending';if(state==='completed'||state==='in_review')return state;const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());return r.due_date&&r.due_date<today?'overdue':state}
  return <section className="panel work-manager">
-  <div className="panel-heading"><div><span className="card-kicker">{role==='lead'?'MANAGE YOUR COHORT':'YOUR FELLOWSHIP WORK'}</span><h2>{table==='tasks'?'Tasks':table==='requirements'?'Requirements':'Events'}</h2></div><div className="manager-actions"><button className="text-button" disabled={busy||loading} onClick={()=>setRevision(v=>v+1)}>Refresh</button>{role==='lead'&&<button className="primary-button" disabled={loading||busy} onClick={()=>{setError('');setEditor({kind:'record'})}}>Add {singular}</button>}</div></div>
+  <div className="panel-heading"><div><h2>{table==='tasks'?'Tasks':table==='requirements'?'Requirements':'Events'}</h2></div><div className="manager-actions"><button className="text-button" disabled={busy||loading} onClick={()=>setRevision(v=>v+1)}>Refresh</button>{role==='lead'&&<button className="primary-button" disabled={loading||busy} onClick={()=>{setError('');setEditor({kind:'record'})}}>Add {singular}</button>}</div></div>
   {error&&<p className="auth-error" role="alert">{error}</p>}{notice&&<p role="status" className="manager-notice">{notice}</p>}
   {editor&&<form key={`${editor.kind}:${editor.item?.id || 'new'}`} className="record-form" onSubmit={save} noValidate aria-busy={busy}>
    <h3>{editor.kind==='submission'?'Submit requirement':`${editor.item?'Edit':'Add'} ${singular}`}</h3>
@@ -104,7 +105,8 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
   </form>}
   <label className="manager-search">Search {table}<input value={filter} onChange={e=>setFilter(e.target.value)} placeholder={`Search ${table}`}/></label>
   {loading?<p role="status">Loading {table}…</p>:<div className="manager-list">{records.filter(r=>`${r.title} ${r.description||''}`.toLowerCase().includes(filter.toLowerCase())).map(r=><article className="manager-record" key={r.id}>
-   <div className="manager-record-heading"><h3>{r.title}</h3>{role==='lead'&&<button className="text-button" disabled={busy} onClick={()=>{setError('');setEditor({kind:'record',item:r})}}>Edit</button>}</div>
+   <div className="manager-record-heading"><h3>{r.title}</h3>{role==='lead'&&<div className="manager-actions"><button className="text-button" disabled={busy} onClick={()=>{setError('');setRemoving(null);setEditor({kind:'record',item:r})}}>Edit</button><button className="text-button danger-button" disabled={busy} onClick={()=>{setError('');setEditor(null);setRemoving(r)}}>Remove</button></div>}</div>
+   {role==='lead'&&removing?.id===r.id&&<section className="remove-confirmation" role="region" aria-labelledby={`remove-${r.id}`}><h4 id={`remove-${r.id}`}>Remove “{r.title}”?</h4><p>This permanently removes the {singular} from your cohort.{table==='requirements'?' Linked intern submissions will also be removed.':''}</p><div className="manager-actions"><button autoFocus className="text-button" disabled={busy} onClick={()=>setRemoving(null)}>Keep {singular}</button><button className="primary-button danger-button" disabled={busy} onClick={()=>{if(role==='lead')void write(()=>client.from(table).delete().eq('id',r.id).eq('cohort_id',cohortId).select('id'),`${singular[0].toUpperCase()+singular.slice(1)} removed.`)}}>{busy?'Removing…':`Remove ${singular}`}</button></div></section>}
    {r.description&&<p>{r.description}</p>}
    <p className="manager-meta">{table==='events'?`${dateLabel(r.starts_at,true)} · ${r.event_type} · ${r.location||'Location to follow'}`:`${dateLabel(r.due_date)} · ${r.assignee_id?(members.find(m=>m.id===r.assignee_id)?.display_name||(r.assignee_id===userId?'Assigned to you':'Assigned intern')):'Shared with cohort'}`}</p>
    {table==='tasks'&&<><p className="manager-meta">{r.project_name} · {r.priority} priority</p>{role==='intern'&&r.assignee_id===userId?<label>Task status<select aria-label={`Status for ${r.title}`} value={r.status} disabled={busy} onChange={e=>taskStatus(r,e.target.value)}>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label>:<span className="data-pill">{labels[r.status||'to_do']}</span>}</>}
