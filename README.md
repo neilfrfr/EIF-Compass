@@ -27,7 +27,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The app opens with sample data when signed out. Use the **Fellow / Lead** selector to preview demo views. Demo task completion is local page state and does not persist.
+The app opens on a dedicated email/password login page. The dashboard is mounted only after session restoration or successful sign-in. Signed-out visitors cannot open the dashboard or switch demo roles. Sign-out returns to the login page. Without Supabase configuration, sign-in stays unavailable; the dashboard does not fall back to a public demo.
 
 Fill in your local configuration to use live accounts:
 
@@ -45,11 +45,11 @@ The client also accepts `VITE_SUPABASE_ANON_KEY` for compatibility. Use the publ
 3. If a user existed before the schema was installed, add their profile using their Auth user ID and the appropriate cohort ID.
 4. In **Table Editor → profiles**, set `role` to `intern` or `lead`, and assign `cohort_id` and an optional `team_name`. Sign out and back in after changing roles.
 5. Add a task in `public.tasks`, using the user's profile ID as `assignee_id` and the matching `cohort_id`.
-6. Click **Connect account** in the app and sign in.
+6. Use the login page to sign in with the fellowship account.
 
 Cohort IDs remain UUIDs. A human-readable label belongs in the cohort's `name`; keep related IDs consistent.
 
-Authenticated accounts load records allowed by the database policies. Interns can update the status of their assigned tasks. Leads can read cohort records. Signed-in query failures are reported instead of retaining sample records, and task completion checks whether a record was actually updated.
+Authenticated accounts load records allowed by the database policies. Interns can update the status of their assigned tasks. Leads can read cohort records. The login gate controls dashboard visibility; database RLS remains the authorization boundary. Browser code and bundled sample content remain downloadable in this client-rendered app. Signed-in query failures are reported instead of retaining sample records, and task completion checks whether a record was actually updated.
 
 ## Vercel deployment
 

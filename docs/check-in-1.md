@@ -24,14 +24,16 @@ Use separate intern and lead accounts with the same cohort ID. Create another in
 
 - [ ] Intern signs in and sees the Fellow workspace.
 - [ ] Lead signs in and sees the Lead workspace.
-- [ ] Signed-in accounts do not show the demo role selector.
+- [ ] Signed-out visitors see login without a dashboard or demo role selector.
+- [ ] Refreshing a signed-in session restores the workspace without flashing the public dashboard.
+- [ ] Invalid credentials stay on login and show an error.
 - [ ] Intern sees a task assigned to their profile.
 - [ ] Completing that task persists after a refresh and a new sign-in.
 - [ ] Lead sees the intern's task in the cohort task view.
 - [ ] Another intern cannot read or update that individually assigned task.
 - [ ] Shared requirements and events load for cohort members.
 - [ ] An account in another cohort cannot read these cohort records.
-- [ ] Signing out restores the demo and removes prior live records.
+- [ ] Signing out returns to login and removes the dashboard and prior live records.
 - [ ] Missing profile or failed queries show an error without displaying demo records as live data.
 
 Record actual results before checking items off.
@@ -52,3 +54,9 @@ The lead fellow list and cohort summary use sample data. Intern journey percenta
 ## Safe handoff
 
 Share repository access and Supabase organization invitations using each developer's own account. Exchange required local configuration through an appropriate private channel. Do not include passwords, private user information, privileged keys, or database credentials in documentation or demo screenshots.
+
+## Login page update
+
+A dedicated sign-in page now gates the dashboard. Session restoration shows a loading screen; sign-out unmounts the workspace. There is no public demo bypass. The client gate controls presentation while Supabase RLS controls database access.
+
+Validation: TypeScript and production build passed. Simulated component tests passed for the loading gate, signed-out login, invalid and successful sign-in, sign-out unmounting, restored sessions, stale initial-session races, and missing configuration. These are local mocked checks, not live account or RLS verification. Browser visual checks were blocked by an unavailable Chromium executable and failed browser download.
