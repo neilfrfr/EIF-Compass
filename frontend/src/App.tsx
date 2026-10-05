@@ -1,7 +1,9 @@
+import type { Session } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
-import { demoEvents, demoFellows, demoRequirements, demoTasks, type EventItem, type Fellow, type Requirement, type Role, type Task, type View } from './data'
+import type { ReactNode } from 'react'
+import { demoFellows, type EventItem, type Fellow, type Requirement, type Role, type Task, type View } from './data'
 import { supabase } from './lib/supabase'
+import AuthGate from './AuthGate'
 
 type IconName = 'home' | 'tasks' | 'check' | 'calendar' | 'bell' | 'search' | 'chevron' | 'arrow' | 'clock' | 'spark' | 'trend' | 'users' | 'flag' | 'plus' | 'dots' | 'lock' | 'close'
 
@@ -39,30 +41,21 @@ function shortDate(value?: string | null) {
 }
 
 export default function App() {
+  return <AuthGate>{session => <Workspace key={session.user.id} session={session}/>}</AuthGate>
+}
+
+function Workspace({ session }: { session: Session }) {
   const [role, setRole] = useState<Role>('intern')
   const [view, setView] = useState<View>('overview')
-  const [tasks, setTasks] = useState<Task[]>(demoTasks)
-  const [requirements, setRequirements] = useState<Requirement[]>(demoRequirements)
-  const [events, setEvents] = useState<EventItem[]>(demoEvents)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [requirements, setRequirements] = useState<Requirement[]>([])
+  const [events, setEvents] = useState<EventItem[]>([])
   const [fellows] = useState<Fellow[]>(demoFellows)
-  const [session, setSession] = useState<any>(null)
   const [profile, setProfile] = useState<{ display_name?: string; role?: Role; team_name?: string } | null>(null)
   const [loadingData, setLoadingData] = useState(false)
   const [connected, setConnected] = useState(false)
-  const [modal, setModal] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [authError, setAuthError] = useState('')
-  const [authBusy, setAuthBusy] = useState(false)
   const [toast, setToast] = useState('')
   const [search, setSearch] = useState('')
-
-  useEffect(() => {
-    if (!supabase) return
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
-    return () => listener.subscription.unsubscribe()
-  }, [])
 
   useEffect(() => {
     const navigate = (event: Event) => {
@@ -84,56 +77,77 @@ export default function App() {
       if (!supabase || !session?.user?.id) {
         setConnected(false)
         setProfile(null)
+        setTasks([])
+        setRequirements([])
+        setEvents([])
+        setLoadingData(false)
         return
       }
       setLoadingData(true)
-      const { data: profileData } = await supabase.from('profiles').select('display_name,role,team_name').eq('id', session.user.id).maybeSingle()
-      if (!active) return
-      setProfile(profileData)
-      setRole(profileData?.role === 'lead' ? 'lead' : 'intern')
+      setConnected(false)
+      setTasks([])
+      setRequirements([])
+      setEvents([])
+      try {
+        const { data: profileData, error: profileError } = await supabase.from('profiles').select('display_name,role,team_name').eq('id', session.user.id).maybeSingle()
+        if (!active) return
+        if (profileError) throw profileError
+        if (!profileData) throw new Error('Your fellowship profile is missing. Ask your lead to finish your account setup.')
+        setProfile(profileData)
+        setRole(profileData?.role === 'lead' ? 'lead' : 'intern')
 
-      let requirementsQuery = supabase.from('requirements').select('id,title,description,due_date,status,assignee_id').order('due_date')
-      if (profileData?.role !== 'lead') requirementsQuery = requirementsQuery.or(`assignee_id.is.null,assignee_id.eq.${session.user.id}`)
+        let requirementsQuery = supabase.from('requirements').select('id,title,description,due_date,status,assignee_id').order('due_date')
+        if (profileData?.role !== 'lead') requirementsQuery = requirementsQuery.or(`assignee_id.is.null,assignee_id.eq.${session.user.id}`)
 
-      const [taskResult, requirementResult, eventResult] = await Promise.all([
-        supabase.from('tasks').select('id,title,project_name,due_date,priority,status,assignee_id').order('due_date'),
-        requirementsQuery,
-        supabase.from('events').select('id,title,starts_at,event_type').order('starts_at'),
-      ])
-      if (!active) return
-      if (!taskResult.error) {
-        setTasks(taskResult.data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          project: item.project_name || 'Fellowship work',
-          due: shortDate(item.due_date),
-          priority: item.priority || 'Medium',
-          status: (item.status === 'for_review' ? 'For review' : item.status === 'completed' ? 'Completed' : item.status === 'in_progress' ? 'In progress' : 'To do') as Task['status'],
-        })))
-      }
-      if (!requirementResult.error) {
-        setRequirements(requirementResult.data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || 'Fellowship requirement',
-          due: shortDate(item.due_date),
-          status: (item.status === 'in_review' ? 'In review' : item.status === 'completed' ? 'Completed' : item.status === 'overdue' ? 'Overdue' : 'Pending') as Requirement['status'],
-        })))
-      }
-      if (!eventResult.error) {
-        setEvents(eventResult.data.map((item: any) => {
-          const date = new Date(item.starts_at)
-          return {
-            day: date.toLocaleDateString('en-US', { day: '2-digit' }),
-            month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+        const [taskResult, requirementResult, eventResult] = await Promise.all([
+          supabase.from('tasks').select('id,title,project_name,due_date,priority,status,assignee_id').order('due_date'),
+          requirementsQuery,
+          supabase.from('events').select('id,title,starts_at,event_type').order('starts_at'),
+        ])
+        if (!active) return
+        if (!taskResult.error) {
+          setTasks(taskResult.data.map((item: any) => ({
+            id: item.id,
             title: item.title,
-            meta: `${date.toLocaleDateString('en-US', { weekday: 'long' })} · ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
-            kind: item.event_type || 'Fellowship event',
-          }
-        }))
+            project: item.project_name || 'Fellowship work',
+            due: shortDate(item.due_date),
+            priority: item.priority || 'Medium',
+            status: (item.status === 'for_review' ? 'For review' : item.status === 'completed' ? 'Completed' : item.status === 'in_progress' ? 'In progress' : 'To do') as Task['status'],
+          })))
+        }
+        if (!requirementResult.error) {
+          setRequirements(requirementResult.data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            description: item.description || 'Fellowship requirement',
+            due: shortDate(item.due_date),
+            status: (item.status === 'in_review' ? 'In review' : item.status === 'completed' ? 'Completed' : item.status === 'overdue' ? 'Overdue' : 'Pending') as Requirement['status'],
+          })))
+        }
+        if (!eventResult.error) {
+          setEvents(eventResult.data.map((item: any) => {
+            const date = new Date(item.starts_at)
+            return {
+              day: date.toLocaleDateString('en-US', { day: '2-digit' }),
+              month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+              title: item.title,
+              meta: `${date.toLocaleDateString('en-US', { weekday: 'long' })} · ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
+              kind: item.event_type || 'Fellowship event',
+            }
+          }))
+        }
+        const queryError = taskResult.error || requirementResult.error || eventResult.error
+        if (queryError) throw queryError
+        setConnected(true)
+      } catch (error) {
+        if (!active) return
+        setTasks([])
+        setRequirements([])
+        setEvents([])
+        setToast(error instanceof Error ? error.message : 'Could not load your workspace. Check that the Supabase schema and permissions are configured.')
+      } finally {
+        if (active) setLoadingData(false)
       }
-      setConnected(!taskResult.error && !requirementResult.error && !eventResult.error)
-      setLoadingData(false)
     }
     void loadWorkspace()
     return () => { active = false }
@@ -149,43 +163,29 @@ export default function App() {
   const filteredRequirements = useMemo(() => requirements.filter(item => `${item.title} ${item.description} ${item.status}`.toLowerCase().includes(search.toLowerCase())), [requirements, search])
   const dueSoon = requirements.filter(item => item.status !== 'Completed').length
   const completeCount = requirements.filter(item => item.status === 'Completed').length
-  const displayName = profile?.display_name || (role === 'lead' ? 'Maya' : 'Aika')
-
-  async function signIn(event: FormEvent) {
-    event.preventDefault()
-    if (!supabase) {
-      setAuthError('Add your Supabase URL and anon key to .env.local first.')
-      return
-    }
-    setAuthBusy(true)
-    setAuthError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setAuthBusy(false)
-    if (error) setAuthError(error.message)
-    else setModal(false)
-  }
+  const displayName = profile?.display_name || 'EIF Fellow'
 
   async function signOut() {
-    if (supabase) await supabase.auth.signOut()
-    setSession(null)
-    setConnected(false)
-    setTasks(demoTasks)
-    setRequirements(demoRequirements)
-    setEvents(demoEvents)
-    setRole('intern')
+    if (!supabase) return
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'local' })
+      if (error) setToast('Could not sign out. Please try again.')
+    } catch {
+      setToast('Could not sign out. Please try again.')
+    }
   }
 
   async function completeDemoTask(taskId: string) {
     if (supabase && session?.user?.id) {
-      const { error } = await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId).eq('assignee_id', session.user.id)
-      if (error) {
+      const { data, error } = await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId).eq('assignee_id', session.user.id).select('id').maybeSingle()
+      if (error || !data) {
         setToast('Could not update this task. Check the Supabase policy and try again.')
         window.setTimeout(() => setToast(''), 3000)
         return
       }
     }
     setTasks(current => current.map(task => task.id === taskId ? { ...task, status: 'Completed' } : task))
-    setToast(session ? 'Nice work — your task is marked complete.' : 'Nice work — your task is marked complete in this demo.')
+    setToast('Nice work — your task is marked complete.')
     window.setTimeout(() => setToast(''), 2600)
   }
 
@@ -199,7 +199,7 @@ export default function App() {
           {activeNav.map(item => <button key={item.id} className={`nav-item ${view === item.id ? 'selected' : ''}`} onClick={() => setView(item.id)}><Icon name={item.icon}/><span>{item.label}</span>{item.id === 'requirements' && <span className="nav-count">{dueSoon}</span>}</button>)}
         </nav>
         <div className="side-spacer"/>
-        {session ? <button className="profile-card" onClick={() => void signOut()} title="Sign out"><div className="avatar avatar-lilac">{initials(displayName)}</div><div className="profile-info"><strong>{displayName}</strong><span>{role === 'lead' ? 'Fellowship lead' : 'EIF fellow'}</span></div><Icon name="dots" size={16}/></button> : <div className="demo-card"><div className="demo-icon"><Icon name="spark" size={16}/></div><strong>Demo workspace</strong><p>Explore the experience with sample cohort data.</p><button onClick={() => { setEmail(''); setPassword(''); setAuthError(''); setModal(true) }}>Connect account <Icon name="arrow" size={15}/></button></div>}
+        <button className="profile-card" onClick={() => void signOut()} title="Sign out" aria-label="Sign out"><div className="avatar avatar-lilac">{initials(displayName)}</div><div className="profile-info"><strong>{displayName}</strong><span>Sign out</span></div><Icon name="dots" size={16}/></button>
         <div className="sidebar-foot"><span className="live-dot"/> Your fellowship, in focus</div>
       </aside>
 
@@ -210,14 +210,14 @@ export default function App() {
             <label className="search-box"><Icon name="search" size={17}/><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search requirements" aria-label="Search requirements"/><kbd>⌘ K</kbd></label>
             <button className="icon-button notification-button" aria-label="Notifications" onClick={() => setToast('You’re all caught up on notifications.')}><Icon name="bell"/><i/></button>
             <div className="top-divider"/>
-            {session ? <button className="mini-profile" onClick={() => void signOut()}><div className="avatar avatar-lilac">{initials(displayName)}</div><Icon name="chevron" size={14}/></button> : <div className="role-select"><span>Preview as</span><select aria-label="Choose demo role" value={role} onChange={event => setRole(event.target.value as Role)}><option value="intern">Fellow</option><option value="lead">Lead</option></select><Icon name="chevron" size={13}/></div>}
+            <button className="mini-profile" onClick={() => void signOut()} aria-label="Sign out"><div className="avatar avatar-lilac">{initials(displayName)}</div><Icon name="chevron" size={14}/></button>
           </div>
         </header>
 
         <div className="page-wrap">
           <div className="page-heading">
             <div><div className="eyebrow">MONDAY, OCTOBER 5, 2026 <span className="eyebrow-line"/></div><h1>{view === 'overview' ? `Good morning, ${displayName.split(' ')[0]}.` : heading}<span className="heading-period">{view === 'overview' ? ' ✦' : ''}</span></h1><p>{role === 'lead' ? 'Here’s how your cohort is moving this week.' : 'A clear view of your fellowship, all in one place.'}</p></div>
-            <div className="heading-actions"><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? (role === 'lead' ? 'Live records · sample metrics' : 'Supabase connected') : 'Sample cohort data'}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
+            <div className="heading-actions"><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? (role === 'lead' ? 'Live records · sample metrics' : 'Supabase connected') : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
           </div>
 
           {role === 'intern' ? <InternContent view={view} tasks={tasks} requirements={filteredRequirements} events={events} completeTask={completeDemoTask} completeCount={completeCount} loading={loadingData}/> : <LeadContent view={view} fellows={fellows} requirements={filteredRequirements} tasks={tasks} events={events}/>}
@@ -227,7 +227,7 @@ export default function App() {
       </main>
 
       {toast && <div className="toast"><span className="toast-check">✓</span>{toast}</div>}
-      {modal && <div className="modal-backdrop" onClick={() => setModal(false)}><section className="auth-modal" onClick={event => event.stopPropagation()}><button className="modal-close" aria-label="Close" onClick={() => setModal(false)}><Icon name="close"/></button><div className="modal-logo"><CompassMark/></div><span className="eyebrow">WELCOME BACK</span><h2>Sign in to your workspace</h2><p>Use your fellowship account to see your real tasks and requirements.</p><form onSubmit={signIn}><label>Email address<input type="email" required value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com"/></label><label>Password<input type="password" required value={password} onChange={event => setPassword(event.target.value)} placeholder="Your password"/></label>{authError && <div className="auth-error">{authError}</div>}<button className="primary-button auth-submit" disabled={authBusy}>{authBusy ? 'Signing in…' : 'Sign in'}<Icon name="arrow" size={16}/></button></form><div className="secure-note"><Icon name="lock" size={14}/> Your account is protected by Supabase Auth</div></section></div>}
+
     </div>
   )
 }
