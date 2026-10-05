@@ -3,6 +3,7 @@ export type View = 'overview' | 'work' | 'requirements' | 'calendar'
 
 export type Task = {
   id: string
+  canComplete?: boolean
   title: string
   project: string
   due: string
