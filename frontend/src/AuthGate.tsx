@@ -56,12 +56,12 @@ export default function AuthGate({ children }: { children: (session: Session) =>
 
   return <main className="login-page">
     <section className="login-story" aria-label="About EIF Compass">
-      <div className="login-brand"><span className="login-compass" aria-hidden="true">✦</span><div><strong>eif compass</strong><span>INNOVATION FELLOWSHIP</span></div></div>
-      <div className="login-story-copy"><span className="login-kicker">YOUR FELLOWSHIP, IN FOCUS</span><h1>A clear direction.<br/>One step at a time.</h1><p>Your tasks, requirements, and fellowship moments—together in one workspace.</p><div className="login-features"><span>01 <b>Keep your work moving</b></span><span>02 <b>Stay close to what’s due</b></span><span>03 <b>Grow with your team</b></span></div></div>
+      <div className="login-brand"><span className="login-compass" aria-hidden="true"><svg viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="16" cy="16" r="13"/><path d="m22 10-4 8-8 4 4-8Z"/></svg></span><div><strong>eif compass</strong><span>INNOVATION FELLOWSHIP</span></div></div>
+      <div className="login-story-copy"><h1>A clear direction.<br/>One step at a time.</h1><p>Your tasks, requirements, and fellowship moments—together in one workspace.</p><div className="login-features"><span><b>Keep your work moving</b></span><span><b>Stay close to what’s due</b></span><span><b>Grow with your team</b></span></div></div>
       <span className="login-story-footer">Small steps, meaningful progress.</span>
     </section>
     <section className="login-form-area">
-      <div className="login-card"><span className="eyebrow">WELCOME BACK</span><h2>Sign in to your workspace</h2><p>Use your fellowship account to continue.</p>
+      <div className="login-card"><h2>Sign in to your workspace</h2><p>Use your fellowship account to continue.</p>
         <form onSubmit={signIn} aria-busy={busy}>
           <label htmlFor="login-email">Email address</label><input id="login-email" type="email" autoComplete="username" required value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com" disabled={busy}/>
           <label htmlFor="login-password">Password</label><input id="login-password" type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} placeholder="Enter your password" disabled={busy}/>

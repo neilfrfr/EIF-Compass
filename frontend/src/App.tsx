@@ -149,7 +149,7 @@ export function Workspace({ session }: { session: Session }) {
 
         <div className="page-wrap">
           <div className="page-heading">
-            <div><div className="eyebrow">{new Date().toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()} <span className="eyebrow-line"/></div><h1>{view === 'overview' ? `Welcome, ${displayName.split(' ')[0]}.` : heading}<span className="heading-period">{view === 'overview' ? ' ✦' : ''}</span></h1><p>{role === 'lead' ? 'Here’s how your cohort is moving this week.' : 'A clear view of your fellowship, all in one place.'}</p></div>
+            <div><h1>{view === 'overview' ? `Welcome, ${displayName.split(' ')[0]}.` : heading}</h1><p>{role === 'lead' ? 'Here’s how your cohort is moving this week.' : 'A clear view of your fellowship, all in one place.'}</p></div>
             <div className="heading-actions"><span className="data-pill">{role === 'lead' ? 'Lead workspace' : 'Intern workspace'}</span><button className="text-button" onClick={() => setRevision(value => value + 1)}>Refresh workspace</button><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? 'Profile verified' : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
           </div>
 

@@ -74,6 +74,25 @@ select set_config('request.jwt.claim.sub','f2000000-0000-4000-8000-000000000004'
 do $$ begin
  if exists(select 1 from public.tasks where cohort_id='f1000000-0000-4000-8000-000000000001') or exists(select 1 from public.events where cohort_id='f1000000-0000-4000-8000-000000000001') or exists(select 1 from public.requirement_submissions) then raise exception 'Cross-cohort read leaked'; end if;
 end $$;
+select set_config('request.jwt.claim.sub','f2000000-0000-4000-8000-000000000002',true);
+do $$ begin
+ delete from public.tasks where id='f3000000-0000-4000-8000-000000000001';
+ if found then raise exception 'Intern deleted own task'; end if;
+ delete from public.requirements where id='f4000000-0000-4000-8000-000000000001';
+ if found then raise exception 'Intern deleted requirement'; end if;
+ delete from public.events where id='f5000000-0000-4000-8000-000000000001';
+ if found then raise exception 'Intern deleted event'; end if;
+end $$;
+select set_config('request.jwt.claim.sub','f2000000-0000-4000-8000-000000000001',true);
+do $$ begin
+ delete from public.tasks where id='f3000000-0000-4000-8000-000000000001';
+ if not found then raise exception 'Lead task removal failed'; end if;
+ delete from public.events where id='f5000000-0000-4000-8000-000000000001';
+ if not found then raise exception 'Lead event removal failed'; end if;
+ delete from public.requirements where id='f4000000-0000-4000-8000-000000000001';
+ if not found then raise exception 'Lead requirement removal failed'; end if;
+ if exists(select 1 from public.requirement_submissions where requirement_id='f4000000-0000-4000-8000-000000000001') then raise exception 'Requirement submissions not removed'; end if;
+end $$;
 set local role anon;
 do $$ begin
  if exists(select 1 from public.tasks where cohort_id='f1000000-0000-4000-8000-000000000001') then raise exception 'Anonymous task visibility'; end if;
