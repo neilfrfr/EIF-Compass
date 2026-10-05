@@ -42,3 +42,7 @@ Run `npm test` and `npm run build`. Tests exercise backend authentication, role 
 Next: tune prompts against real approved examples, add durable usage quotas, then implement Google OAuth and a separate structured draft/approval/execution pipeline with event/message IDs and idempotency. No Google credentials or integrations are required for this release.
 
 Official references: [OpenRouter quickstart](https://openrouter.ai/docs/quickstart), [Vite on Vercel](https://vercel.com/docs/frameworks/frontend/vite), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
+
+### Empty model responses
+
+Requests disable optional reasoning while retaining the 1,200-token cap. Models with mandatory reasoning may still exhaust that allowance before returning visible text. The handler accepts plain text and text-content blocks, never substitutes private reasoning for an answer, and distinguishes token exhaustion from content filtering. On repeated failures, inspect the corresponding OpenRouter Activity entry or select a fixed model without mandatory reasoning. No automatic retry or paid fallback is performed.
