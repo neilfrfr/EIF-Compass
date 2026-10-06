@@ -169,4 +169,4 @@ export function Workspace({ session }: { session: Session }) {
 
 function initials(name: string) { return name.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase() }
 
-function CompassMark() { return <svg viewBox="0 0 40 40" className="compass-svg" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="m25.8 14.2-3.6 8-8 3.6 3.6-8 8-3.6Z" fill="currentColor"/><circle cx="20" cy="20" r="1.4" fill="var(--brand-deep)"/><path d="M20 3v4M37 20h-4M20 37v-4M3 20h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> }
+function CompassMark() { return <img src="/compass-mark.svg" width="32" height="32" className="compass-svg" alt="" aria-hidden="true"/> }

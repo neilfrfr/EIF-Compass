@@ -56,7 +56,7 @@ export default function AuthGate({ children }: { children: (session: Session) =>
 
   return <main className="login-page">
     <section className="login-story" aria-label="About EIF Compass">
-      <div className="login-brand"><span className="login-compass" aria-hidden="true"><svg viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="16" cy="16" r="13"/><path d="m22 10-4 8-8 4 4-8Z"/></svg></span><div><strong>eif compass</strong><span>INNOVATION FELLOWSHIP</span></div></div>
+      <div className="login-brand"><span className="login-compass" aria-hidden="true"><img src="/compass-mark.svg" width="36" height="36" alt=""/></span><div><strong>eif compass</strong><span>INNOVATION FELLOWSHIP</span></div></div>
       <div className="login-story-copy"><h1>A clear direction.<br/>One step at a time.</h1><p>Your tasks, requirements, and fellowship moments—together in one workspace.</p><div className="login-features"><span><b>Keep your work moving</b></span><span><b>Stay close to what’s due</b></span><span><b>Grow with your team</b></span></div></div>
       <span className="login-story-footer">Small steps, meaningful progress.</span>
     </section>
