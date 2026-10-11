@@ -1,6 +1,6 @@
 # Calendar integration and editable submission bin
 Date: 2026-10-11
-Status: Written specification awaiting review. Product code is not implemented.
+Status: Implemented on feature/week-2-core-build; automated checks passed. Live Preview OAuth and Storage walkthrough pending.
 Extends: 2026-10-11-week-2-core-build-design.md
 User decisions: support Workspace links and file attachments; allow editing before deadline; lock after deadline; add Google Calendar integration now.
 This explicitly adds Google Calendar to the prior post-demo scope. Keep the other Week 2 commitments; deliver the two additions as separate changes.
@@ -33,7 +33,7 @@ Disconnect revokes Google access and deletes stored credentials/state; explain a
 UI lives in Calendar: connection status, Connect/Reconnect/Disconnect, selectable records, review and sync results. Assistant can explain/navigate to this flow; direct chat execution is deferred until the verified sync exists and has explicit action confirmation. A model change alone cannot enable it.
 
 ## Required configuration
-Server-only: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, GOOGLE_TOKEN_ENCRYPTION_KEY, APP_URL, SUPABASE_SERVICE_ROLE_KEY (restricted backend only). Existing Supabase/OpenRouter variables remain unchanged. No VITE_ prefix for any secret.
+Server-only: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, GOOGLE_TOKEN_ENCRYPTION_KEY, APP_URL, SUPABASE_SECRET_KEY (restricted backend only; legacy SUPABASE_SERVICE_ROLE_KEY accepted). Existing Supabase/OpenRouter variables remain unchanged. No VITE_ prefix for any secret.
 GOOGLE_REDIRECT_URI must equal APP_URL + /api/google/callback and be registered exactly in Google Cloud. APP_URL is a fixed trusted origin, not derived from request Host headers. Use separate test and production OAuth configuration.
 Enable Google Calendar API; configure OAuth consent audience/test users; create a Web application client; register redirects. Google Cloud project/account configuration is performed by its owner; do not ask for credentials in chat.
 Connection and synchronization remain unconfigured until those values are supplied securely. Do not expose an apparently working Connect action when server configuration is absent.

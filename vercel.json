@@ -7,6 +7,12 @@
   "functions": {
     "api/assistant.js": {
       "maxDuration": 60
+    },
+    "api/google/[action].js": {
+      "maxDuration": 300
+    },
+    "api/submissions/remove.js": {
+      "maxDuration": 300
     }
   }
 }
