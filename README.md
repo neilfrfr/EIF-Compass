@@ -14,9 +14,9 @@ EIF Compass gives Eskwelabs Innovation Fellowship interns one workspace for task
 
 The current backend uses Supabase for database authorization and a Vercel serverless endpoint for the OpenRouter assistant. There is no separate FastAPI/Render service. See [frontend setup](frontend/README.md) and [backend setup](backend/README.md).
 
-## Check-in 1 status — October 6, 2026
+## Implementation status — October 11, 2026
 
-Checkpoint: October 7. The foundation is largely implemented, with some Week 2 workflows and the assistant already built. The deployed lead/intern walkthrough and realistic demo dataset still need verification. This is not yet the complete Demo Day MVP.
+Check-in 1 foundation: October 7. The foundation is largely implemented, with some Week 2 workflows and the assistant already built. The deployed lead/intern walkthrough and realistic demo dataset still need verification. This is not yet the complete Demo Day MVP.
 
 | Area | Current status |
 | --- | --- |
@@ -24,8 +24,8 @@ Checkpoint: October 7. The foundation is largely implemented, with some Week 2 w
 | Intern dashboard | Database-backed task completion, requirement status, overdue work, upcoming events, and deadline-based next action |
 | Lead dashboard | Database-backed cohort/team counts, task progress, review queue, overdue work, and intern drill-down; blocker list missing |
 | Task management | Lead create/edit/remove; intern assigned-task status updates; text search; sprint linkage and due-date/priority/status/sprint filters missing |
-| Requirements | Instructions, individual submission links, lead approval/request changes, and computed overdue status implemented |
-| Calendar | Cohort events displayed in Philippine time; requirement deadlines are not yet combined into the agenda |
+| Requirements | Links, notes, private attachments, drafts, unsubmit/resubmit, deadline locks and lead review implemented on the feature branch; live Storage verification pending |
+| Calendar | Cohort event management plus Google connection, selected event/deadline review and own-account sync implemented on the feature branch; live OAuth verification pending. The main agenda still needs CAL-1 completion |
 | Assistant | Server-side OpenRouter with verified Supabase sessions and permission-filtered context; real-provider accuracy/safety test and streaming pending |
 | Projects, feedback, blockers, notifications | Dedicated P0 workflows not implemented |
 | Demo data | Base seed contains a cohort and sample requirements/events; the planned ~20 interns, 5 teams, and 2 sprints need preparation |
@@ -52,7 +52,7 @@ This checklist follows the supplied PRD's P0 requirements. Implemented portions 
 - **October 14:** complete all non-AI P0 workflows and deterministic ranking; review assistant readiness.
 - **October 21:** demonstrate the tested P0 MVP. Freeze and rehearse by October 20.
 
-Freeze additional features until the missing P0 workflows are complete. AI Knowledge (closed, unmerged PR #10), Google Calendar/email execution, announcements, exports, and further AI cohort-summary work are deferred. Existing email/calendar assistant outputs are drafts only. P1 feedback summaries, approve-to-create tasks, and month/week calendars are optional after P0.
+Freeze additional features until the missing P0 workflows are complete. AI Knowledge (closed, unmerged PR #10), email execution, announcements, exports, and further AI cohort-summary work are deferred. Google Calendar was explicitly added to scope on October 11 and implemented behind user selection/confirmation. Existing email/calendar assistant outputs remain drafts only; chat does not execute them. P1 feedback summaries, approve-to-create tasks, and month/week calendars are optional after P0.
 
 The implementation deliberately uses Supabase RLS and Vercel functions instead of the proposed FastAPI/Render stack. Database checks enforce authorization; document this architecture choice rather than treating the proposed stack as completed.
 
@@ -121,9 +121,9 @@ Prior implementation checks passed the component/API tests, TypeScript check, Vi
 
 Leads can create and edit cohort tasks, requirements, and events inside the app. Task assignment lists only interns in the lead's cohort. Interns can change their own assigned task status; shared tasks are view only. Events are displayed in Philippine time.
 
-Requirements have individual submissions: interns submit HTTP(S) links; leads approve or request changes. A shared requirement does not share completion status between interns. Approved submissions cannot be changed by interns. Pending requirements with past deadlines display as overdue.
+Requirements have individual submissions: interns save drafts with HTTP(S)/Google Workspace links, a note and private attachments, then submit for review. Before the cutoff they can unsubmit, edit and resubmit. Leads approve or request changes, including reopening approved work. Date-only cutoffs use the end of the specified Philippine date; optional exact cutoffs take precedence. At or after cutoff, intern changes are rejected by the database. Leads can extend or clear exact cutoffs. A shared requirement does not share completion status between interns. Approved submissions cannot be changed by interns. Pending requirements with past deadlines display as overdue.
 
-For an existing database, apply `backend/supabase/migrations/20261005_lead_workflows.sql`, then `20261005_restrict_helpers.sql`, once. For a fresh project, run `backend/supabase/schema.sql` first, then both upgrades. Do not rerun the base schema on an upgraded project: its original grants and policies predate these workflows.
+For an existing database, apply only missing migrations in order: `20261005_lead_workflows.sql`, `20261005_lead_removal.sql`, `20261005_restrict_helpers.sql`, then `20261011060705_calendar_submission_bin.sql` under `backend/supabase/migrations/`. For a fresh project, run `backend/supabase/schema.sql` first, then those upgrades. Do not rerun the base schema on an upgraded project: its original grants and policies predate these workflows.
 
 Verification: `npm test` runs component interaction tests; `npm run build` checks TypeScript and the production build. Frontend tests require Node 24.19+ (jsdom 30). The SQL regression suite in `backend/supabase/tests/workflows.sql` creates isolated fixtures, exercises authenticated roles, and rolls back all fixture data.
 
@@ -145,6 +145,14 @@ The login and role dashboards use a teal, sage, and white palette derived from t
 
 ### AI fellowship assistant
 
-The AI assistant supports intern daily plans and requirement/check-in guidance, and lead cohort briefings, review summaries, and communication drafts. A server-side OpenRouter endpoint verifies Supabase sessions and fetches permitted records under RLS. Email and calendar suggestions are drafts only; Google execution is not connected yet.
+The AI assistant supports intern daily plans and requirement/check-in guidance, and lead cohort briefings, review summaries, and communication drafts. A server-side OpenRouter endpoint verifies Supabase sessions and fetches permitted records under RLS. Email and calendar suggestions are drafts only; Calendar now has a separate, user-confirmed own-account sync flow; assistant chat does not execute it.
 
 Set server-only `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY` in root `.env.local` locally and Vercel Environment Variables when deployed. Never use a `VITE_` prefix for the OpenRouter key. Run `npm run dev:api` alongside `npm run dev` locally. See [assistant framework and setup](docs/ai/assistant-framework.md) for limits, data handling, prompts, and planned Google integration.
+
+### Google Calendar and editable submission bin
+
+The feature branch adds secure Google OAuth/PKCE, encrypted server credentials, selected event/deadline review, retry-safe own-calendar sync and disconnect. Requirement removal cleans private attachments through the server Storage API; interrupted cleanup is locked and retryable. No Gmail, invitations or Drive Picker are included.
+
+Run `npm test` and `npm run build`. Both passed for this implementation, including migrated PGlite PostgreSQL permission/state checks and mocked OAuth/provider tests. Real Google consent, Storage behavior and deployed role walkthrough remain pending; no production migration or merge was performed. Vercel denied this session access to environment settings, so Preview variables remain unverified.
+
+Follow [Preview setup and pre-merge tests](docs/google-calendar-setup.md). Keep integration variables in Preview while testing; set production-specific values only for the reviewed release. The dedicated projects/sprints, feedback, blockers and notification MVP work remains outstanding.

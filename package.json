@@ -7,7 +7,13 @@
     "dev": "npm --prefix frontend run dev --",
     "build": "npm --prefix frontend run build",
     "preview": "npm --prefix frontend run preview --",
-    "test": "node backend/tests/assistant.test.cjs && node backend/tests/assistant-response.test.cjs && npm --prefix frontend test",
+    "test": "node backend/tests/assistant.test.cjs && node backend/tests/assistant-response.test.cjs && node backend/tests/google.test.cjs && node backend/tests/google-handler.test.cjs && node backend/tests/submission-removal.test.cjs && node backend/tests/submission-db.test.cjs && npm --prefix frontend test",
     "dev:api": "node --env-file-if-exists=.env.local --env-file-if-exists=frontend/.env.local backend/assistant/dev.cjs"
+  },
+  "dependencies": {
+    "google-auth-library": "11.2.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8"
   }
 }

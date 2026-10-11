@@ -5,11 +5,11 @@ import React,{act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {JSDOM} from 'jsdom'
 mkdirSync('.test-output',{recursive:true})
-for(const name of ['Assistant','App','AuthGate','WorkManager','Dashboard','dashboard','data']){
-let content=ts.transpileModule(readFileSync(`src/${name}.${['data','dashboard'].includes(name)?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
+for(const name of ['Assistant','App','AuthGate','WorkManager','Dashboard','dashboard','data','SubmissionBin','submissions','GoogleCalendar']){
+let content=ts.transpileModule(readFileSync(`src/${name}.${['data','dashboard','submissions'].includes(name)?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 content=content.replace("import './assistant.css';",'')
 content=content.replaceAll("'./lib/supabase'","'./test-client.js'")
-for(const dep of ['Assistant','AuthGate','WorkManager','Dashboard','dashboard','data'])content=content.replaceAll(`'./${dep}'`,`'./${dep}.js'`)
+for(const dep of ['Assistant','AuthGate','WorkManager','Dashboard','dashboard','data','SubmissionBin','submissions','GoogleCalendar'])content=content.replaceAll(`'./${dep}'`,`'./${dep}.js'`)
 writeFileSync(`.test-output/${name}.js`,content)
 }
 let role='intern',fail=false
@@ -22,13 +22,13 @@ const {Workspace}=await import('../.test-output/App.js')
 const root=createRoot(document.getElementById('root'))
 const session={user:{id:'test-user'}}
 await act(async()=>root.render(React.createElement(Workspace,{session})))
-assert.match(document.body.textContent,/YOUR FELLOWSHIP JOURNEY/)
+assert.match(document.body.textContent,/Your fellowship journey/)
 role='lead'
 await act(async()=>window.dispatchEvent(new window.Event('focus')))
-assert.match(document.body.textContent,/COHORT COMMAND CENTER/,'Role must refresh from database on window focus')
+assert.match(document.body.textContent,/Cohort command center/,'Role must refresh from database on window focus')
 fail=true
 await act(async()=>window.dispatchEvent(new window.Event('focus')))
-assert.ok(!document.body.textContent.includes('YOUR FELLOWSHIP JOURNEY'),'Profile failures must not fall back to intern')
+assert.ok(!document.body.textContent.includes('Your fellowship journey'),'Profile failures must not fall back to intern')
 assert.match(document.body.textContent,/Profile unavailable/)
 await act(async()=>root.unmount())
 console.log('PASS: profile role refresh and no intern fallback on profile errors')
