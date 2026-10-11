@@ -28,4 +28,6 @@ Interfaces: createGoogleHandler({env,fetchImpl,oauthFactory}); encrypt/decrypt; 
 ## Task 3: Review and handoff
 - [x] Run whole suite and permission checks; review branch; fix important findings with regression tests.
 - [x] Update setup/readme with fresh verification evidence and remaining live OAuth checks.
-- [ ] Push feature branch and open draft PR; do not merge.
+- [x] Push feature branch and open draft PR; do not merge.
+
+Delivery: draft PR #15. Preview deployment READY for commit 421422d. Live OAuth/Storage walkthrough remains pending.
