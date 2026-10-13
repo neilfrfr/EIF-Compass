@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react'
 import type {SupabaseClient} from '@supabase/supabase-js'
-import {deriveDashboard,requirementState} from './dashboard'
-import type {DashboardData} from './dashboard'
+import {deriveDashboard,requirementState} from './dashboard-model'
+import type {DashboardData} from './dashboard-model'
 import type {Role,View} from './data'
 type Props={client:SupabaseClient;role:Role;userId:string;cohortId:string;revision:number;onNavigate:(view:View)=>void}
 const statusLabel:Record<string,string>={completed:'Completed',in_review:'In review',pending:'Pending',overdue:'Overdue',to_do:'To do',in_progress:'In progress',for_review:'For review'}

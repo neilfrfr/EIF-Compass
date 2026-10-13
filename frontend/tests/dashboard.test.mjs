@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import {existsSync} from 'node:fs'
-const {deriveDashboard}=existsSync('src/dashboard.ts')?await import('../src/dashboard.ts'):{deriveDashboard:()=>({})}
+const {deriveDashboard}=existsSync('src/dashboard-model.ts')?await import('../src/dashboard-model.ts'):{deriveDashboard:()=>({})}
 const data={cohort:{id:'c',name:'Actual cohort',starts_on:'2026-09-30',ends_on:'2026-11-24'},profiles:[{id:'a',display_name:'A',role:'intern',team_name:'Research'},{id:'b',display_name:'B',role:'intern',team_name:'Research'},{id:'l',display_name:'Lead',role:'lead'}],tasks:[{id:'t1',title:'Completed task',assignee_id:'a',status:'completed',due_date:'2026-10-03'},{id:'t2',title:'Overdue task',assignee_id:'b',status:'to_do',due_date:'2026-10-04'},{id:'t3',title:'Shared task',assignee_id:null,status:'to_do',due_date:'2026-10-08'}],requirements:[{id:'r1',title:'Shared reflection',assignee_id:null,status:'pending',due_date:'2026-10-04'},{id:'r2',title:'A brief',assignee_id:'a',status:'pending',due_date:'2026-10-07'}],submissions:[{requirement_id:'r1',user_id:'a',status:'completed',submission_url:'https://example.com'},{requirement_id:'r2',user_id:'a',status:'in_review',submission_url:'https://example.com'}],events:[{id:'e1',title:'Past event',starts_at:'2026-10-04T14:00:00+08:00'},{id:'e2',title:'Future event',starts_at:'2026-10-07T14:00:00+08:00'}]}
 const now=new Date('2026-10-05T14:00:00Z')
 const lead=deriveDashboard(data,'lead','l',now)
@@ -24,6 +24,8 @@ assert.equal(intern.nextAction,null,'Reviewed work must not be suggested as outs
 const b=deriveDashboard(data,'intern','b',now)
 assert.equal(b.nextAction.title,'Overdue task')
 assert.equal(b.nextAction.reason,'Overdue task')
+const expired=deriveDashboard({...data,tasks:[],submissions:[]},'intern','a',new Date('2026-10-09T00:00:00Z'))
+assert.equal(expired.nextAction,null,'Locked past-due requirements are not actionable')
 const empty=deriveDashboard({...data,profiles:[],tasks:[],requirements:[],submissions:[],events:[]},'lead','l',now)
 assert.equal(empty.taskPercent,null)
 assert.equal(empty.requirementSlots,0)

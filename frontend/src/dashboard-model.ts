@@ -35,8 +35,8 @@ export function deriveDashboard(data:DashboardData,role:string,userId:string,now
   return {name,members:members.length,total,done,percent:total?Math.round(done/total*100):null}
  })
  const events=data.events.filter(e=>new Date(e.starts_at).getTime()>=now.getTime()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at))
- const actions=[...assignedTasks.filter(t=>t.status!=='completed'&&t.status!=='for_review'&&t.due_date).map(t=>({id:t.id,title:t.title,date:t.due_date!,view:'work' as const,reason:t.due_date!<today?'Overdue task':'Upcoming task deadline'})),...requirements.filter(r=>['pending','overdue'].includes(requirementState(r,userId,data.submissions,today))&&r.due_date).map(r=>({id:r.id,title:r.title,date:r.due_date!,view:'requirements' as const,reason:r.due_date!<today?'Overdue requirement':'Upcoming requirement deadline'}))].sort((a,b)=>a.date.localeCompare(b.date)||(a.view===b.view?0:a.view==='work'?-1:1)||a.id.localeCompare(b.id))
- // Date sorting prioritizes overdue work, then the nearest deadline. No blocker table exists yet.
+ const actions=[...assignedTasks.filter(t=>t.status!=='completed'&&t.status!=='for_review'&&t.due_date).map(t=>({id:t.id,title:t.title,date:t.due_date!,view:'work' as const,reason:t.due_date!<today?'Overdue task':'Upcoming task deadline'})),...requirements.filter(r=>requirementState(r,userId,data.submissions,today)==='pending'&&r.due_date&&r.due_date>=today).map(r=>({id:r.id,title:r.title,date:r.due_date!,view:'requirements' as const,reason:'Upcoming requirement deadline'}))].sort((a,b)=>a.date.localeCompare(b.date)||(a.view===b.view?0:a.view==='work'?-1:1)||a.id.localeCompare(b.id))
+ // Submission editing closes at the deadline, so expired requirements are not next actions.
  const start=data.cohort.starts_on?Date.parse(data.cohort.starts_on):null,end=data.cohort.ends_on?Date.parse(data.cohort.ends_on):null
  const totalWeeks=start!==null&&end!==null?Math.max(1,Math.ceil((end-start+86400000)/604800000)):null
  const week=start!==null?Math.max(0,Math.floor((Date.parse(today)-start)/604800000)+1):null
