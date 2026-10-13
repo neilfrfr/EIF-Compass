@@ -5,10 +5,11 @@ import type { Role, View } from './data'
 import SubmissionBin from './SubmissionBin'
 import type {SubmissionRow} from './submissions'
 
-type RecordItem = { id: string; title: string; cohort_id?: string; description?: string; project_name?: string; project_id?: string|null; sprint_id?: string|null; assignee_id?: string | null; due_date?: string; due_at?: string; removing?: boolean; priority?: string; status?: string; starts_at?: string; event_type?: string; location?: string }
+type RecordItem = { id: string; title: string; cohort_id?: string; description?: string; project_name?: string; project_id?: string|null; sprint_id?: string|null; milestone_id?: string|null; assignee_id?: string | null; due_date?: string; due_at?: string; removing?: boolean; priority?: string; status?: string; starts_at?: string; event_type?: string; location?: string }
 type Member = { id: string; display_name: string; role: string }
 type Sprint = {id:string;project_id:string;title:string;sequence:number}
-type Project = {id:string;title:string}
+type Project = {id:string;title:string;team_id:string}
+type Milestone = {id:string;title:string;project_id:string;sprint_id:string}
 type Submission = SubmissionRow
 type Editor = { kind: 'record'; item?: RecordItem }
 type Props = { client: SupabaseClient; role: Role; view: View; userId: string; cohortId: string; onChanged: () => void }
@@ -30,6 +31,7 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
  const [members,setMembers]=useState<Member[]>([])
  const [sprints,setSprints]=useState<Sprint[]>([])
  const [projects,setProjects]=useState<Project[]>([])
+ const [milestones,setMilestones]=useState<Milestone[]>([])
  const [submissions,setSubmissions]=useState<Submission[]>([])
  const [loading,setLoading]=useState(true)
  const [busy,setBusy]=useState(false)
@@ -45,18 +47,19 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
  const [statusFilter,setStatusFilter]=useState('all')
  useEffect(()=>{
   let active=true
-  setLoading(true);setError('');setEditor(null);setRemoving(null);setRecords([]);setSubmissions([]);setMembers([]);setSprints([]);setProjects([]);setFilter('')
+  setLoading(true);setError('');setEditor(null);setRemoving(null);setRecords([]);setSubmissions([]);setMembers([]);setSprints([]);setProjects([]);setMilestones([]);setFilter('')
   async function load(){
    try {
-    const [result,people,submitted,sprintRows,projectRows]=await Promise.all([
+    const [result,people,submitted,sprintRows,projectRows,milestoneRows]=await Promise.all([
      client.from(table).select('*').eq('cohort_id',cohortId).order(table==='events'?'starts_at':'due_date'),
      role==='lead'?client.from('profiles').select('id,display_name,role').eq('cohort_id',cohortId):Promise.resolve({data:[],error:null}),
      table==='requirements'?client.from('requirement_submissions').select('*'):Promise.resolve({data:[],error:null}),
      table==='tasks'?client.from('sprints').select('id,project_id,title,sequence').eq('cohort_id',cohortId).order('sequence'):Promise.resolve({data:[],error:null}),
-     table==='tasks'?client.from('projects').select('id,title').eq('cohort_id',cohortId):Promise.resolve({data:[],error:null}),
+     table==='tasks'?client.from('projects').select('id,title,team_id').eq('cohort_id',cohortId):Promise.resolve({data:[],error:null}),
+     table==='tasks'?client.from('milestones').select('id,title,project_id,sprint_id').eq('cohort_id',cohortId):Promise.resolve({data:[],error:null}),
     ])
-    if(result.error||people.error||submitted.error||sprintRows.error||projectRows.error)throw result.error||people.error||submitted.error||sprintRows.error||projectRows.error
-    if(active){setRecords(result.data||[]);setMembers(people.data||[]);setSubmissions(submitted.data||[]);setSprints(sprintRows.data||[]);setProjects(projectRows.data||[])}
+    if(result.error||people.error||submitted.error||sprintRows.error||projectRows.error||milestoneRows.error)throw result.error||people.error||submitted.error||sprintRows.error||projectRows.error||milestoneRows.error
+    if(active){setRecords(result.data||[]);setMembers(people.data||[]);setSubmissions(submitted.data||[]);setSprints(sprintRows.data||[]);setProjects(projectRows.data||[]);setMilestones(milestoneRows.data||[])}
    }catch(e){if(active)setError(message(e))}finally{if(active)setLoading(false)}
   }
   void load();return()=>{active=false}
@@ -84,9 +87,12 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
    if(assignee&&!members.some(m=>m.id===assignee&&m.role==='intern')){setError('Choose an intern in your cohort.');return}
    Object.assign(payload,{description:text('description'),due_date:text('due_date')||null,assignee_id:assignee})
    if(table==='tasks'){
-    const sprint=text('sprint_id')?sprints.find(s=>s.id===text('sprint_id')):null
-    if(text('sprint_id')&&!sprint){setError('Choose an available sprint.');return}
-    Object.assign(payload,{project_name:sprint?projects.find(p=>p.id===sprint.project_id)?.title||'Fellowship work':text('project_name')||'Fellowship work',priority:text('priority'),status:text('status'),sprint_id:sprint?.id||null,project_id:sprint?.project_id||null,milestone_id:null})
+    const milestone=text('milestone_id')?milestones.find(m=>m.id===text('milestone_id')):null
+    const sprint=sprints.find(s=>s.id===(milestone?.sprint_id||text('sprint_id')))
+    if((text('sprint_id')&&!sprint)||(text('milestone_id')&&!milestone)||(milestone&&text('sprint_id')&&milestone.sprint_id!==text('sprint_id'))){setError('Choose a milestone in the selected sprint.');return}
+    const project=projects.find(p=>p.id===(sprint?.project_id||text('project_id')))
+    if((text('project_id')&&!project)||(project&&sprint&&text('project_id')&&project.id!==text('project_id'))){setError('Choose a sprint in the selected project.');return}
+    Object.assign(payload,{project_name:project?.title||text('project_name')||'Fellowship work',priority:text('priority'),status:text('status'),sprint_id:sprint?.id||null,project_id:project?.id||null,project_team_id:project?.team_id||null,milestone_id:milestone?.id||null})
    }
    else {
     const exact=text('due_at');const cutoff=exact?new Date(`${exact}:00+08:00`):null
@@ -113,6 +119,8 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
   if(priorityFilter!=='all'&&r.priority!==priorityFilter)return false
   if(statusFilter!=='all'&&r.status!==statusFilter)return false
   if(dueFilter==='overdue')return !!r.due_date&&r.due_date<today&&r.status!=='completed'
+  if(dueFilter==='today')return r.due_date===today
+  if(dueFilter==='next7')return !!r.due_date&&r.due_date>=today&&r.due_date<=new Date(Date.parse(`${today}T00:00:00+08:00`)+6*86400000).toLocaleDateString('en-CA',{timeZone:'Asia/Manila'})
   if(dueFilter==='upcoming')return !!r.due_date&&r.due_date>=today
   if(dueFilter==='none')return !r.due_date
   return true
@@ -130,14 +138,14 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
      <label>Assign to<select name="assignee_id" defaultValue={editor.item?.assignee_id||''}><option value="">{table==='tasks'?'Shared cohort task (view only for interns)':'All interns (individual submissions)'}</option>{members.filter(m=>m.role==='intern').map(m=><option key={m.id} value={m.id}>{m.display_name}</option>)}</select></label>
      <label>Deadline<input name="due_date" type="date" defaultValue={editor.item?.due_date||''}/></label>
      {table==='requirements'&&<label>Exact cutoff (optional, Philippine time)<input name="due_at" type="datetime-local" defaultValue={localEventTime(editor.item?.due_at)}/><small>Overrides the date above. Clear to use the end of the deadline date.</small></label>}
-     {table==='tasks'&&<><label>Project label for tasks without a sprint<input name="project_name" defaultValue={editor.item?.project_name||'Fellowship work'}/></label><label>Sprint<select name="sprint_id" defaultValue={editor.item?.sprint_id||''}><option value="">No sprint</option>{sprints.map(s=><option key={s.id} value={s.id}>{projects.find(p=>p.id===s.project_id)?.title||'Project'} · {s.title}</option>)}</select><small>Select a sprint to link this task to its project.</small></label><label>Priority<select name="priority" defaultValue={editor.item?.priority||'medium'}>{['low','medium','high'].map(p=><option key={p}>{p}</option>)}</select></label><label>Status<select name="status" defaultValue={editor.item?.status||'to_do'}>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label></>}
+     {table==='tasks'&&<><label>Project label for tasks without a project<input name="project_name" defaultValue={editor.item?.project_name||'Fellowship work'}/></label><label>Project<select name="project_id" defaultValue={editor.item?.project_id||''}><option value="">No project</option>{projects.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label><label>Sprint<select name="sprint_id" defaultValue={editor.item?.sprint_id||''}><option value="">No sprint</option>{sprints.map(s=><option key={s.id} value={s.id}>{projects.find(p=>p.id===s.project_id)?.title||'Project'} · {s.title}</option>)}</select><small>Select a sprint to link this task to its project.</small></label><label>Milestone<select name="milestone_id" defaultValue={editor.item?.milestone_id||''}><option value="">No milestone</option>{milestones.map(m=><option key={m.id} value={m.id}>{projects.find(p=>p.id===m.project_id)?.title||'Project'} · {m.title}</option>)}</select></label><label>Priority<select name="priority" defaultValue={editor.item?.priority||'medium'}>{['low','medium','high'].map(p=><option key={p}>{p}</option>)}</select></label><label>Status<select name="status" defaultValue={editor.item?.status||'to_do'}>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label></>}
     </>}
    </>
    <div className="manager-actions"><button className="primary-button" type="submit">{busy?'Saving…':'Save'}</button><button className="text-button" type="button" onClick={()=>setEditor(null)}>Cancel</button></div>
    </fieldset>
   </form>}
   <label className="manager-search">Search {table}<input value={filter} onChange={e=>setFilter(e.target.value)} placeholder={`Search ${table}`}/></label>
-  {table==='tasks'&&<div className="work-filters"><label>Due date<select value={dueFilter} onChange={e=>setDueFilter(e.target.value)}><option value="all">All dates</option><option value="overdue">Overdue</option><option value="upcoming">Today or later</option><option value="none">No deadline</option></select></label><label>Sprint<select value={sprintFilter} onChange={e=>setSprintFilter(e.target.value)}><option value="all">All sprints</option><option value="none">No sprint</option>{sprints.map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></label><label>Priority<select value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)}><option value="all">All priorities</option>{['low','medium','high'].map(p=><option key={p} value={p}>{p}</option>)}</select></label><label>Status<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">All statuses</option>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label></div>}
+  {table==='tasks'&&<div className="work-filters"><label>Due date<select value={dueFilter} onChange={e=>setDueFilter(e.target.value)}><option value="all">All dates</option><option value="overdue">Overdue</option><option value="today">Today</option><option value="next7">Next seven days</option><option value="upcoming">Today or later</option><option value="none">No deadline</option></select></label><label>Sprint<select value={sprintFilter} onChange={e=>setSprintFilter(e.target.value)}><option value="all">All sprints</option><option value="none">No sprint</option>{sprints.map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></label><label>Priority<select value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)}><option value="all">All priorities</option>{['low','medium','high'].map(p=><option key={p} value={p}>{p}</option>)}</select></label><label>Status<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">All statuses</option>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label><button className="text-button" onClick={()=>{setFilter('');setDueFilter('all');setSprintFilter('all');setPriorityFilter('all');setStatusFilter('all')}}>Reset filters</button></div>}
   {loading?<p role="status">Loading {table}…</p>:<div className="manager-list">{shown.map(r=><article className="manager-record" key={r.id}>
    <div className="manager-record-heading"><h3>{r.title}</h3>{role==='lead'&&<div className="manager-actions"><button className="text-button" disabled={busy||r.removing} onClick={()=>{setError('');setRemoving(null);setEditor({kind:'record',item:r})}}>Edit</button><button className="text-button danger-button" disabled={busy} onClick={()=>{setError('');setEditor(null);setRemoving(r)}}>Remove</button></div>}</div>
    {role==='lead'&&removing?.id===r.id&&<section className="remove-confirmation" role="region" aria-labelledby={`remove-${r.id}`}><h4 id={`remove-${r.id}`}>Remove “{r.title}”?</h4><p>This permanently removes the {singular} from your cohort.{table==='requirements'?' Linked intern submissions will also be removed.':''}</p><div className="manager-actions"><button autoFocus className="text-button" disabled={busy} onClick={()=>setRemoving(null)}>Keep {singular}</button><button className="primary-button danger-button" disabled={busy} onClick={()=>{if(role==='lead')void write(()=>table==='requirements'?removeRequirement(r.id):client.from(table).delete().eq('id',r.id).eq('cohort_id',cohortId).select('id'),`${singular[0].toUpperCase()+singular.slice(1)} removed.`)}}>{busy?'Removing…':`Remove ${singular}`}</button></div></section>}

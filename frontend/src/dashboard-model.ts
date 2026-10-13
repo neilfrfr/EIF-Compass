@@ -4,7 +4,12 @@ export type RequirementRow={id:string;title:string;assignee_id:string|null;statu
 export type SubmissionRow={requirement_id:string;user_id:string;status:string;submission_url:string}
 export type EventRow={id:string;title:string;starts_at:string;event_type?:string;location?:string}
 export type CohortRow={id:string;name:string;starts_on:string|null;ends_on:string|null}
-export type DashboardData={cohort:CohortRow;profiles:ProfileRow[];tasks:TaskRow[];requirements:RequirementRow[];submissions:SubmissionRow[];events:EventRow[]}
+export type BlockerRow={id:string;reporter_id:string;project_id?:string|null;milestone_id?:string|null;status:string;description:string;created_at?:string}
+export type MilestoneRow={id:string;title:string;project_id:string;status:string;due_date?:string|null}
+export type ProjectRow={id:string;title:string;team_id:string}
+export type TeamRow={id:string;name:string}
+export type MembershipRow={team_id:string;user_id:string}
+export type DashboardData={cohort:CohortRow;profiles:ProfileRow[];tasks:TaskRow[];requirements:RequirementRow[];submissions:SubmissionRow[];events:EventRow[];blockers?:BlockerRow[];milestones?:MilestoneRow[];projects?:ProjectRow[];projectTeams?:TeamRow[];memberships?:MembershipRow[]}
 export function manilaDay(now:Date){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(now)}
 export function requirementState(r:RequirementRow,userId:string,submissions:SubmissionRow[],today:string){
  const status=submissions.find(s=>s.requirement_id===r.id&&s.user_id===userId)?.status||r.status
@@ -23,22 +28,28 @@ export function deriveDashboard(data:DashboardData,role:string,userId:string,now
  const people=(role==='lead'?interns:interns.filter(p=>p.id===userId)).map(p=>{
   const personal=data.tasks.filter(t=>t.assignee_id===p.id)
   const reqs=data.requirements.filter(r=>r.assignee_id===null||r.assignee_id===p.id)
-  return {...p,taskTotal:personal.length,taskDone:personal.filter(t=>t.status==='completed').length,overdueTasks:personal.filter(t=>t.status!=='completed'&&t.due_date&&t.due_date<today).length,requirementTotal:reqs.length,requirementDone:reqs.filter(r=>requirementState(r,p.id,data.submissions,today)==='completed').length,overdueRequirements:reqs.filter(r=>requirementState(r,p.id,data.submissions,today)==='overdue').length}
+  const linkedTeam=(data.projectTeams||[]).find(team=>(data.memberships||[]).some(m=>m.team_id===team.id&&m.user_id===p.id))
+  return {...p,team_name:linkedTeam?.name||p.team_name,taskTotal:personal.length,taskDone:personal.filter(t=>t.status==='completed').length,overdueTasks:personal.filter(t=>t.status!=='completed'&&t.due_date&&t.due_date<today).length,requirementTotal:reqs.length,requirementDone:reqs.filter(r=>requirementState(r,p.id,data.submissions,today)==='completed').length,overdueRequirements:reqs.filter(r=>requirementState(r,p.id,data.submissions,today)==='overdue').length}
  })
  const requirementSlots=role==='lead'?people.reduce((n,p)=>n+p.requirementTotal,0):requirements.length
  const completedRequirements=role==='lead'?people.reduce((n,p)=>n+p.requirementDone,0):requirements.filter(r=>requirementState(r,userId,data.submissions,today)==='completed').length
  const overdueRequirements=role==='lead'?people.reduce((n,p)=>n+p.overdueRequirements,0):requirements.filter(r=>requirementState(r,userId,data.submissions,today)==='overdue').length
  const reviewQueue=data.submissions.filter(s=>s.status==='in_review'&&(role==='lead'||s.user_id===userId)).filter(s=>data.requirements.some(r=>r.id===s.requirement_id&&(r.assignee_id===null||r.assignee_id===s.user_id)))
- const teams=[...new Set(interns.map(p=>p.team_name?.trim()).filter((t):t is string=>!!t))].map(name=>{
+ const teamNames=(data.projectTeams?.length?data.projectTeams.map(t=>t.name):interns.map(p=>p.team_name?.trim()).filter((t):t is string=>!!t))
+ const teams=[...new Set(teamNames)].map(name=>{
   const members=people.filter(p=>p.team_name?.trim()===name)
   const total=members.reduce((n,p)=>n+p.taskTotal,0),done=members.reduce((n,p)=>n+p.taskDone,0)
   return {name,members:members.length,total,done,percent:total?Math.round(done/total*100):null}
  })
  const events=data.events.filter(e=>new Date(e.starts_at).getTime()>=now.getTime()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at))
- const actions=[...assignedTasks.filter(t=>t.status!=='completed'&&t.status!=='for_review'&&t.due_date).map(t=>({id:t.id,title:t.title,date:t.due_date!,view:'work' as const,reason:t.due_date!<today?'Overdue task':'Upcoming task deadline'})),...requirements.filter(r=>requirementState(r,userId,data.submissions,today)==='pending'&&r.due_date&&r.due_date>=today).map(r=>({id:r.id,title:r.title,date:r.due_date!,view:'requirements' as const,reason:'Upcoming requirement deadline'}))].sort((a,b)=>a.date.localeCompare(b.date)||(a.view===b.view?0:a.view==='work'?-1:1)||a.id.localeCompare(b.id))
+ const blockers=(data.blockers||[]).filter(b=>role==='lead'||b.reporter_id===userId)
+ const openBlockers=blockers.filter(b=>b.status==='open').sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')||a.id.localeCompare(b.id))
+ const dated=[...assignedTasks.filter(t=>!['completed','for_review'].includes(t.status)&&t.due_date).map(t=>({id:t.id,title:t.title,date:t.due_date!,view:'work' as const,reason:t.due_date!<today?'Overdue task':'Nearest task deadline'})),...requirements.filter(r=>role==='intern'&&requirementState(r,userId,data.submissions,today)==='pending'&&r.due_date&&r.due_date>=today).map(r=>({id:r.id,title:r.title,date:r.due_date!,view:'requirements' as const,reason:'Nearest requirement deadline'}))].sort((a,b)=>a.date.localeCompare(b.date)||(a.view===b.view?0:a.view==='work'?-1:1)||a.id.localeCompare(b.id))
+ const blocked=openBlockers.map(b=>({blocker:b,milestone:(data.milestones||[]).find(m=>m.id===b.milestone_id&&m.status!=='completed')})).filter(x=>x.milestone).sort((a,b)=>(a.milestone!.due_date||'9999').localeCompare(b.milestone!.due_date||'9999')||a.blocker.id.localeCompare(b.blocker.id))[0]
+ const nextAction=dated[0]|| (blocked?{id:blocked.blocker.id,title:blocked.milestone!.title,date:blocked.milestone!.due_date||null,view:'blockers' as const,reason:`Open blocker: ${blocked.blocker.description}`}:null)
  // Submission editing closes at the deadline, so expired requirements are not next actions.
  const start=data.cohort.starts_on?Date.parse(data.cohort.starts_on):null,end=data.cohort.ends_on?Date.parse(data.cohort.ends_on):null
  const totalWeeks=start!==null&&end!==null?Math.max(1,Math.ceil((end-start+86400000)/604800000)):null
  const week=start!==null?Math.max(0,Math.floor((Date.parse(today)-start)/604800000)+1):null
- return {today,interns,tasks,assignedTasks,completedTasks,taskPercent,overdueTasks,requirements,requirementSlots,completedRequirements,overdueRequirements,reviewQueue,teams,people,events,nextAction:actions[0]||null,week:week!==null&&totalWeeks!==null?Math.min(week,totalWeeks):week,totalWeeks}
+ return {today,interns,tasks,assignedTasks,completedTasks,taskPercent,overdueTasks,requirements,requirementSlots,completedRequirements,overdueRequirements,reviewQueue,teams,people,events,blockers,openBlockers,nextAction,week:week!==null&&totalWeeks!==null?Math.min(week,totalWeeks):week,totalWeeks}
 }

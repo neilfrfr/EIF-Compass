@@ -13,7 +13,7 @@ const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'})
 Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,FormData:dom.window.FormData,IS_REACT_ACT_ENVIRONMENT:true})
 const root=createRoot(document.getElementById('root'))
 const calls=[]
-const fixtures={profiles:[{id:'intern-a',display_name:'Intern A',role:'intern',cohort_id:'cohort'}],projects:[{id:'project-a',title:'Research project'}],sprints:[{id:'sprint-a',project_id:'project-a',title:'Sprint 1',sequence:1}],tasks:[{id:'task-a',title:'Assigned task',assignee_id:'intern-a',cohort_id:'cohort',description:'Notes',project_name:'Compass',due_date:'2026-10-07',priority:'high',status:'to_do'},{id:'shared',title:'Shared task',assignee_id:null,cohort_id:'cohort',priority:'low',status:'to_do'}],requirements:[{id:'req-a',title:'Reflection',cohort_id:'cohort',due_date:'2026-10-04',status:'pending',assignee_id:null}],events:[{id:'event-a',title:'Check-in',starts_at:'2026-10-07T14:00:00+08:00',location:'Online',event_type:'Milestone'}],requirement_submissions:[],submission_files:[]}
+const fixtures={profiles:[{id:'intern-a',display_name:'Intern A',role:'intern',cohort_id:'cohort'}],projects:[{id:'project-a',team_id:'team-a',title:'Research project'}],sprints:[{id:'sprint-a',project_id:'project-a',title:'Sprint 1',sequence:1}],milestones:[{id:'milestone-a',project_id:'project-a',sprint_id:'sprint-a',title:'Discovery'}],tasks:[{id:'task-a',title:'Assigned task',assignee_id:'intern-a',cohort_id:'cohort',description:'Notes',project_name:'Compass',due_date:'2026-10-07',priority:'high',status:'to_do'},{id:'shared',title:'Shared task',assignee_id:null,cohort_id:'cohort',priority:'low',status:'to_do'}],requirements:[{id:'req-a',title:'Reflection',cohort_id:'cohort',due_date:'2026-10-04',status:'pending',assignee_id:null}],events:[{id:'event-a',title:'Check-in',starts_at:'2026-10-07T14:00:00+08:00',location:'Online',event_type:'Milestone'}],requirement_submissions:[],submission_files:[]}
 let failWrite=false
 globalThis.fetch=async()=>{calls.push({table:'requirements',op:'delete'});return new Response(JSON.stringify(failWrite?{error:'Save denied'}:{data:[{id:'saved'}]}),{status:failWrite?502:200})}
 const client={auth:{async getSession(){return {data:{session:{access_token:'test'}}}}},from(table){const q={table,op:'read',payload:null,filters:[],select(){return this},order(){return this},eq(k,v){this.filters.push([k,v]);return this},insert(p){this.op='insert';this.payload=p;return this},update(p){this.op='update';this.payload=p;return this},upsert(p){this.op='upsert';this.payload=p;return this},delete(){this.op='delete';return this},single(){return this},then(resolve,reject){if(this.op!=='read')calls.push({table:this.table,op:this.op,payload:this.payload,filters:this.filters});return Promise.resolve(failWrite&&this.op!=='read'?{data:null,error:{message:'Save denied'}}:{data:this.op==='read'?fixtures[table]:(table==='requirement_submissions'?{...this.payload,requirement_id:'req-a',user_id:'intern-a'}:[{id:'saved'}]),error:null}).then(resolve,reject)}};return q}}
@@ -36,10 +36,20 @@ await click('Add task')
 document.querySelector('[name="title"]').value='Linked task'
 document.querySelector('[name="assignee_id"]').value='intern-a'
 document.querySelector('[name="sprint_id"]').value='sprint-a'
+document.querySelector('[name="milestone_id"]').value='milestone-a'
 await submit()
 assert.equal(calls.at(-1).payload.sprint_id,'sprint-a')
 assert.equal(calls.at(-1).payload.project_id,'project-a')
+assert.equal(calls.at(-1).payload.project_team_id,'team-a')
+assert.equal(calls.at(-1).payload.milestone_id,'milestone-a')
 assert.equal(calls.at(-1).payload.project_name,'Research project')
+await click('Add task')
+document.querySelector('[name="title"]').value='Project task'
+document.querySelector('[name="project_id"]').value='project-a'
+await submit()
+assert.equal(calls.at(-1).payload.project_id,'project-a')
+assert.equal(calls.at(-1).payload.project_team_id,'team-a')
+assert.equal(calls.at(-1).payload.sprint_id,null)
 await click('Remove')
 assert.ok(document.querySelector('[role="region"]'),'Removal confirmation missing')
 const beforeCancel=calls.length
