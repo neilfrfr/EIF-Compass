@@ -31,7 +31,8 @@ const [legacyTask, sharedRequirement] = [id(37), id(38)];
       grant select,insert,update,delete on storage.objects to authenticated;`);
     await exec(fs.readFileSync('backend/supabase/schema.sql', 'utf8').replace('create extension if not exists pgcrypto;', ''));
     const week2Migration = '20261013150014_week2_data_permissions.sql';
-    for (const file of fs.readdirSync(migrationDir).sort().filter(file => file !== week2Migration)) {
+    const workflowMigration = '20261013170000_intern_workflows.sql';
+    for (const file of fs.readdirSync(migrationDir).sort().filter(file => file !== week2Migration && file !== workflowMigration)) {
       await exec(fs.readFileSync(migrationDir + file, 'utf8'));
     }
     await exec(`insert into public.cohorts(id,name) values ('${cohortA}','A'),('${cohortB}','B');
@@ -49,6 +50,7 @@ const [legacyTask, sharedRequirement] = [id(37), id(38)];
       insert into public.requirement_submissions(requirement_id,user_id,submission_url,status)
       values ('${sharedRequirement}','${internA}','https://example.invalid/work','in_review');`);
     await exec(fs.readFileSync(migrationDir + week2Migration, 'utf8'));
+    await exec(fs.readFileSync(migrationDir + workflowMigration, 'utf8'));
     assert.equal(Number((await query(`select count(*)::int as n from pg_constraint
       where conrelid = 'public.tasks'::regclass and confrelid = 'public.team_memberships'::regclass
       and contype = 'f'`)).rows[0].n), 1, 'database FK must protect task membership across concurrent writes');
@@ -93,7 +95,8 @@ const [legacyTask, sharedRequirement] = [id(37), id(38)];
     assert.equal(await count('requirement_submissions', `user_id = '${internA}'`), 1);
     assert.equal(await count('profiles', `id = '${teammateA}'`), 1);
     assert.equal(await count('profiles', `id = '${internB}'`), 0);
-    assert.equal(await count('notifications'), 1);
+    assert.equal(await count('team_memberships'), 2, 'intern sees own team membership');
+    assert.equal(await count('notifications'), 3, 'task and feedback notices are created alongside the manual notice');
     await exec(`update public.tasks set status = 'completed' where id = '${taskA}'`);
     await exec(`update public.tasks set status = 'completed' where id = '${legacyTask}'`);
     await denied(`update public.tasks set title = 'Forged' where id = '${taskA}'`);
@@ -118,7 +121,7 @@ const [legacyTask, sharedRequirement] = [id(37), id(38)];
     assert.equal(await count('requirement_submissions', `requirement_id = '${sharedRequirement}'`), 0, 'another intern cannot read a personal submission');
     assert.equal(await count('blockers'), 0, 'blockers stay personal even for teammates');
     assert.equal(await count('blocker_comments'), 0);
-    assert.equal(await count('notifications'), 0);
+    assert.equal(await count('notifications'), 1, 'teammate receives shared sprint feedback');
     await exec(`update public.tasks set status = 'to_do' where id = '${taskA}'`);
     assert.equal(await count('tasks', `id = '${taskA}' and status = 'completed'`), 1);
     await denied(`insert into public.blocker_comments(blocker_id,cohort_id,author_id,body) values ('${blockerA}','${cohortA}','${teammateA}','Sneak')`);

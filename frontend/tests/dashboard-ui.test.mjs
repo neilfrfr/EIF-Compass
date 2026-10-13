@@ -5,9 +5,9 @@ import React,{act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {JSDOM} from 'jsdom'
 mkdirSync('.test-output',{recursive:true})
-for(const name of ['Dashboard','dashboard']){
+for(const name of ['Dashboard','dashboard-model']){
 const source=readFileSync(`src/${name}.${name==='Dashboard'?'tsx':'ts'}`,'utf8')
-writeFileSync(`.test-output/${name}.js`,ts.transpileModule(source,{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replaceAll("'./dashboard'","'./dashboard.js'"))
+writeFileSync(`.test-output/${name}.js`,ts.transpileModule(source,{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replaceAll("'./dashboard-model'","'./dashboard-model.js'"))
 }
 const {default:Dashboard}=await import('../.test-output/Dashboard.js')
 const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'})

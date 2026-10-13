@@ -8,6 +8,8 @@ import WorkManager from './WorkManager'
 import Dashboard from './Dashboard'
 import Assistant from './Assistant'
 import GoogleCalendar from './GoogleCalendar'
+import Agenda from './Agenda'
+import InternFlows from './InternFlows'
 
 type IconName = 'home' | 'tasks' | 'check' | 'calendar' | 'bell' | 'search' | 'chevron' | 'arrow' | 'clock' | 'spark' | 'trend' | 'users' | 'flag' | 'plus' | 'dots' | 'lock' | 'close'
 
@@ -47,6 +49,8 @@ export function Workspace({ session }: { session: Session }) {
   const [toast, setToast] = useState('')
   const [revision, setRevision] = useState(0)
   const [workspaceError, setWorkspaceError] = useState('')
+  const [showSync, setShowSync] = useState(() => new URLSearchParams(window.location.search).has('google'))
+  const [showEventManager, setShowEventManager] = useState(false)
 
   useEffect(() => {
     const refresh = () => setRevision(value => value + 1)
@@ -110,9 +114,13 @@ export function Workspace({ session }: { session: Session }) {
     { id: 'work', label: role === 'lead' ? 'Cohort tasks' : 'My work', icon: 'tasks' },
     { id: 'requirements', label: 'Requirements', icon: 'check' },
     { id: 'calendar', label: 'Calendar', icon: 'calendar' },
+    { id: 'projects', label: 'Projects', icon: 'flag' },
+    { id: 'feedback', label: 'Feedback', icon: 'check' },
+    { id: 'blockers', label: 'Blockers', icon: 'lock' },
+    { id: 'notifications', label: 'Notifications', icon: 'bell' },
     { id: 'assistant', label: 'AI assistant', icon: 'spark' },
   ]
-  const heading = view === 'overview' ? 'Overview' : view === 'work' ? (role === 'lead' ? 'Cohort tasks' : 'My work') : view === 'requirements' ? 'Requirements' : view === 'assistant' ? 'AI assistant' : 'Calendar'
+  const heading = view === 'overview' ? 'Overview' : view === 'work' ? (role === 'lead' ? 'Cohort tasks' : 'My work') : view === 'requirements' ? 'Requirements' : view === 'assistant' ? 'AI assistant' : view[0].toUpperCase()+view.slice(1)
   const displayName = profile?.display_name || 'EIF Fellow'
 
   async function signOut() {
@@ -156,7 +164,7 @@ export function Workspace({ session }: { session: Session }) {
             <div className="heading-actions"><span className="data-pill">{role === 'lead' ? 'Lead workspace' : 'Intern workspace'}</span><button className="text-button" onClick={() => setRevision(value => value + 1)}>Refresh workspace</button><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? 'Profile verified' : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
           </div>
 
-          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={setView}/> : view === 'assistant' ? <Assistant key={`${session.user.id}:${role}:${profile.cohort_id}`} client={supabase} role={role} cohortId={profile.cohort_id} onNavigate={setView}/> : <>{view==='calendar'&&<GoogleCalendar client={supabase} cohortId={profile.cohort_id}/>}<WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/></> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
+          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={setView}/> : view === 'assistant' ? <Assistant key={`${session.user.id}:${role}:${profile.cohort_id}`} client={supabase} role={role} cohortId={profile.cohort_id} onNavigate={setView}/> : view==='calendar'?<><div className="manager-actions calendar-action">{role==='lead'&&<button className="text-button" onClick={()=>setShowEventManager(v=>!v)} aria-expanded={showEventManager}>{showEventManager?'Hide event manager':'Manage events'}</button>}<button className="text-button" onClick={()=>setShowSync(v=>!v)} aria-expanded={showSync}>{showSync?'Hide Google sync':'Sync to Google Calendar'}</button></div><Agenda client={supabase} cohortId={profile.cohort_id} revision={revision}/>{showSync&&<GoogleCalendar client={supabase} cohortId={profile.cohort_id}/ >}{role==='lead'&&showEventManager&&<WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>}</>:['projects','feedback','blockers','notifications'].includes(view)?<InternFlows client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>:<WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
 
           <footer className="page-footer"><span>EIF COMPASS <span className="footer-sep">·</span> FELLOWSHIP COHORT 2026</span><span>Small steps, meaningful progress.</span></footer>
         </div>
