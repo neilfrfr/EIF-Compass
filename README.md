@@ -14,35 +14,35 @@ EIF Compass gives Eskwelabs Innovation Fellowship interns one workspace for task
 
 The current backend uses Supabase for database authorization and a Vercel serverless endpoint for the OpenRouter assistant. There is no separate FastAPI/Render service. See [frontend setup](frontend/README.md) and [backend setup](backend/README.md).
 
-## Implementation status — October 11, 2026
+## Implementation status — October 14, 2026
 
-Check-in 1 foundation: October 7. The foundation is largely implemented, with some Week 2 workflows and the assistant already built. The deployed lead/intern walkthrough and realistic demo dataset still need verification. This is not yet the complete Demo Day MVP.
+Check-in 1 foundation: October 7. The foundation and October 14 non-AI P0 workflows are implemented. A local browser lead/intern walkthrough passed; the deployed walkthrough and realistic demo dataset still need verification. This is not yet the complete Demo Day MVP.
 
 | Area | Current status |
 | --- | --- |
 | Authentication and roles | Email/password login, session restoration, sign-out, profile role loading, and database RLS implemented |
-| Intern dashboard | Database-backed task completion, requirement status, overdue work, upcoming events, and deadline-based next action |
-| Lead dashboard | Database-backed cohort/team counts, task progress, review queue, overdue work, and intern drill-down; blocker list missing |
-| Task management | Lead create/edit/remove; intern assigned-task status updates; text search; sprint linkage and due-date/priority/status/sprint filters missing |
+| Intern dashboard | Database-backed progress and deterministic suggested next action: overdue task, nearest deadline, then blocked milestone |
+| Lead dashboard | Cohort metrics, review queue, open blockers, overdue item lists, team and intern drill-down |
+| Task management | Lead create/edit/remove with project, sprint and milestone links; intern assigned-task status; combined search, deadline, sprint, priority and status filters |
 | Requirements | Links, notes, private attachments, drafts, unsubmit/resubmit, deadline locks and lead review implemented on the feature branch; live Storage verification pending |
-| Calendar | Cohort event management plus Google connection, selected event/deadline review and own-account sync implemented on the feature branch; live OAuth verification pending. The main agenda still needs CAL-1 completion |
-| Assistant | Server-side OpenRouter with verified Supabase sessions and permission-filtered context; real-provider accuracy/safety test and streaming pending |
-| Projects, feedback, blockers, notifications | Dedicated P0 workflows not implemented |
+| Calendar | Cohort event management and chronological event/requirement agenda; Google selected-event sync remains unverified against live OAuth |
+| Assistant | Server-side OpenRouter with verified sessions and permission-filtered feedback context; real-provider accuracy/safety test and streaming pending |
+| Projects, feedback, blockers, notifications | Project progress, lead feedback, blocker discussion/resolution, and task, feedback, due-soon, overdue notices with read state implemented |
 | Demo data | Base seed contains a cohort and sample requirements/events; the planned ~20 interns, 5 teams, and 2 sprints need preparation |
-| Validation | Component/API tests and production builds passed in prior implementation checks; live database workflow/permission tests passed with rolled-back fixtures; deployed browser walkthrough remains pending |
+| Validation | Component/API and migrated database tests, production build, and local browser lead/intern walkthrough passed; deployed browser walkthrough remains pending |
 
 ### Remaining committed MVP work
 
 This checklist follows the supplied PRD's P0 requirements. Implemented portions are listed above; partial items below must be completed before calling the MVP done.
 
-- [ ] **AUTH-1 / team access:** verify deployed role/cohort isolation and implement permitted team data access alongside the project model; current intern access is own assigned and shared cohort records.
-- [ ] **TASK-1 / TASK-2:** add project/sprint relationships and filters for due date, sprint, priority, and status.
-- [ ] **CAL-1:** combine fellowship events and requirement deadlines in a chronological agenda.
-- [ ] **PROJ-1 / DASH-1:** team/project page, current sprint/milestone, milestone timeline, and derived project progress.
-- [ ] **FDBK-1:** lead feedback per sprint and intern feedback history.
-- [ ] **BLK-1 / LEAD-1:** intern blocker reports with category/description, lead comments/resolution, and lead blocker list.
-- [ ] **NOTIF-1:** in-app notices for deadlines, overdue work, new feedback, and task assignment, with mark-as-read.
-- [ ] **DASH-2:** complete deterministic Next Best Action (overdue, nearest deadline, then blocked milestone), suggestion label, reason/due date, and AI explanation while preserving the rule-based fallback.
+- [x] **AUTH-1 / team access:** database policies restrict project, feedback and blocker reads; live lead/intern accounts verified their own views.
+- [x] **TASK-1 / TASK-2:** project/sprint/milestone links and combined due date, sprint, priority, status and text filters.
+- [x] **CAL-1:** combined events and requirement deadlines in a chronological agenda.
+- [x] **PROJ-1 / DASH-1:** lead team membership and project/sprint/milestone create/edit controls; team/project progress, sprint and milestone display.
+- [x] **FDBK-1:** lead feedback per sprint and intern feedback history.
+- [x] **BLK-1 / LEAD-1:** intern blocker reports with category/description, lead comments/resolution, and lead blocker list.
+- [x] **NOTIF-1:** in-app notices for deadlines, overdue work, new feedback, and task assignment, with mark-as-read.
+- [x] **DASH-2 rule:** deterministic Next Best Action (overdue actionable task, nearest deadline, then blocked milestone), suggestion label, reason/due date. AI explanation remains unverified.
 - [ ] **AI-1:** include permitted feedback once available; explicitly prohibit grading, ranking/scoring/penalizing interns and pass/fail decisions; verify refusals and grounding; add streaming to meet the PRD's response requirement.
 - [ ] **Demo and QA:** realistic seeded cohort, deployed end-to-end role/persistence tests, 20-question AI test (at least 90% accuracy and zero evaluative outputs), 3–5 user usability test (at least 80% identify next priority within 30 seconds), dashboard load under 3 seconds, keyboard/mobile checks, two rehearsals and backup recording.
 
@@ -135,7 +135,7 @@ The intern overview shows assigned-task completion, personal requirement approva
 
 The lead overview shows actual intern/team counts, cohort task completion, a submission review queue, overdue work, team task progress and individual intern drill-down. Shared requirements count once per eligible intern, with individual submissions overriding the original requirement status. Existing requirement statuses are retained as legacy fallback where no individual submission exists.
 
-The fellowship week comes from cohort dates; percentages represent recorded task completion. Missing data produces explicit empty states, not sample metrics. Deadline suggestions prioritize overdue work and then nearest deadlines; blocker ranking and model-generated explanations remain future work. No seed records or database schema changes are introduced by this dashboard update.
+The fellowship week comes from cohort dates; percentages represent recorded task completion. Missing data produces explicit empty states. Suggestions prioritize overdue actionable tasks, nearest task or requirement deadline, then an open blocker on an incomplete milestone. Past-due requirement submissions are locked, so they remain in overdue lists but are not suggested as an action. The assistant answer does not set the dashboard suggestion.
 
 ### Lead removal and visual refinement
 
@@ -153,6 +153,6 @@ Set server-only `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `SUPABASE_URL`, and `S
 
 The feature branch adds secure Google OAuth/PKCE, encrypted server credentials, selected event/deadline review, retry-safe own-calendar sync and disconnect. Requirement removal cleans private attachments through the server Storage API; interrupted cleanup is locked and retryable. No Gmail, invitations or Drive Picker are included.
 
-Run `npm test` and `npm run build`. Both passed for this implementation, including migrated PGlite PostgreSQL permission/state checks and mocked OAuth/provider tests. Real Google consent, Storage behavior and deployed role walkthrough remain pending; no production migration or merge was performed. Vercel denied this session access to environment settings, so Preview variables remain unverified.
+Run `npm test` and `npm run build`. Both passed for this implementation, including migrated PGlite PostgreSQL permission/state checks and mocked OAuth/provider tests. The due-notification migration was applied to the connected Supabase project. Local browser lead/intern role workflows passed. Real Google consent, Storage behavior and the deployed role walkthrough remain pending; Vercel Preview variables remain unverified.
 
 Follow [Preview setup and pre-merge tests](docs/google-calendar-setup.md). Keep integration variables in Preview while testing; set production-specific values only for the reviewed release. The dedicated projects/sprints, feedback, blockers and notification MVP work remains outstanding.

@@ -32,7 +32,8 @@ const [legacyTask, sharedRequirement] = [id(37), id(38)];
     await exec(fs.readFileSync('backend/supabase/schema.sql', 'utf8').replace('create extension if not exists pgcrypto;', ''));
     const week2Migration = '20261013150014_week2_data_permissions.sql';
     const workflowMigration = '20261013170000_intern_workflows.sql';
-    for (const file of fs.readdirSync(migrationDir).sort().filter(file => file !== week2Migration && file !== workflowMigration)) {
+    const dueMigration = '20261013174145_phase3_due_notifications.sql';
+    for (const file of fs.readdirSync(migrationDir).sort().filter(file => ![week2Migration,workflowMigration,dueMigration].includes(file))) {
       await exec(fs.readFileSync(migrationDir + file, 'utf8'));
     }
     await exec(`insert into public.cohorts(id,name) values ('${cohortA}','A'),('${cohortB}','B');
@@ -51,6 +52,7 @@ const [legacyTask, sharedRequirement] = [id(37), id(38)];
       values ('${sharedRequirement}','${internA}','https://example.invalid/work','in_review');`);
     await exec(fs.readFileSync(migrationDir + week2Migration, 'utf8'));
     await exec(fs.readFileSync(migrationDir + workflowMigration, 'utf8'));
+    await exec(fs.readFileSync(migrationDir + dueMigration, 'utf8'));
     assert.equal(Number((await query(`select count(*)::int as n from pg_constraint
       where conrelid = 'public.tasks'::regclass and confrelid = 'public.team_memberships'::regclass
       and contype = 'f'`)).rows[0].n), 1, 'database FK must protect task membership across concurrent writes');
@@ -142,6 +144,23 @@ const [legacyTask, sharedRequirement] = [id(37), id(38)];
     assert.equal(await count('blockers', 'resolved_at is not null'), 1);
     await denied(`update public.blockers set description = 'Changed' where id = '${blockerA}'`);
 
+    await owner();
+    await exec(`update public.tasks set status='to_do', due_date=((now() at time zone 'Asia/Manila')::date - 1) where id='${legacyTask}';
+      update public.requirements set due_date=((now() at time zone 'Asia/Manila')::date + 1) where id='${sharedRequirement}';`);
+    await login(internA);
+    await exec('select public.refresh_due_notifications()');
+    await exec('select public.refresh_due_notifications()');
+    assert.equal(await count('notifications', "type='overdue'"), 1, 'owned overdue task gets one notice');
+    assert.equal(await count('notifications', "reference_type='requirement'"), 0, 'submitted requirement gets no reminder');
+    await login(teammateA);
+    await exec('select public.refresh_due_notifications()');
+    assert.equal(await count('notifications', "type='due_soon' and reference_type='requirement'"), 1, 'shared pending requirement gets a personal notice');
+    await login(leadA);
+    await exec('select public.refresh_due_notifications()');
+    assert.equal(await count('notifications', "type in ('overdue','due_soon')"), 0, 'lead gets no personal reminder');
+    await owner();
+    assert.equal(await count('notifications', "type in ('overdue','due_soon')"), 2);
+
     await login(leadB);
     await empty(`select * from public.projects where id = '${projectA}'`);
     await empty(`select * from public.blockers where id = '${blockerA}'`);
@@ -164,6 +183,7 @@ const [legacyTask, sharedRequirement] = [id(37), id(38)];
     assert.equal(await count('tasks', `id = '${taskA}'`), 0);
     assert.equal(await count('blockers'), 0);
     await exec('reset role; set role anon;');
+    await denied('select public.refresh_due_notifications()');
     for (const table of ['teams','team_memberships','projects','sprints','milestones','sprint_feedback','blockers','blocker_comments','notifications']) {
       await denied(`select * from public.${table}`);
     }
