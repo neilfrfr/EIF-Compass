@@ -88,5 +88,9 @@ assert.match(document.body.textContent,/Read/)
 assert.ok(!document.body.textContent.includes('Unread'))
 await act(async()=>root.render(React.createElement(Agenda,{client,cohortId:'cohort',revision:0})))
 assert.ok(document.body.textContent.indexOf('Project brief')<document.body.textContent.indexOf('Check-in'))
+records.events=[{id:'later',cohort_id:'cohort',title:'Midnight next day',starts_at:'2026-10-14T16:00:00+00:00'}];
+records.requirements=[{id:'earlier',cohort_id:'cohort',title:'End of previous day',due_date:'2026-10-14'}];
+await act(async()=>root.render(React.createElement(Agenda,{client,cohortId:'cohort',revision:99})));
+assert.ok(document.body.textContent.indexOf('End of previous day')<document.body.textContent.indexOf('Midnight next day'),'Agenda must sort instants across offsets');
 await act(async()=>root.unmount())
 console.log('PASS: project progress, feedback, blocker comments, persisted notice state, chronological agenda')
