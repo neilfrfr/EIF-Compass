@@ -43,3 +43,8 @@ const empty=deriveDashboard({...data,profiles:[],tasks:[],requirements:[],submis
 assert.equal(empty.taskPercent,null)
 assert.equal(empty.requirementSlots,0)
 console.log('PASS: actual metrics, shared requirement status, personal visibility, deadline priority, empty data')
+const exactData={...data,tasks:[],submissions:[],requirements:[{id:'exact',title:'Exact cutoff',assignee_id:'a',status:'pending',due_date:'2026-10-14',due_at:'2026-10-14T00:00:00Z'}]};
+const exact=deriveDashboard(exactData,'intern','a',new Date('2026-10-14T01:00:00Z'));
+assert.equal(exact.overdueRequirements,1,'Exact cutoff overrides date for overdue count');assert.equal(exact.nextAction,null,'Expired exact cutoff must not be recommended');
+const at=deriveDashboard(exactData,'intern','a',new Date('2026-10-14T00:00:00Z'));assert.equal(at.nextAction,null,'Requirement is locked at exact cutoff');
+const override=deriveDashboard({...exactData,requirements:[{...exactData.requirements[0],due_date:'2026-10-01',due_at:'2026-10-15T00:00:00Z'}]},'intern','a',new Date('2026-10-14T01:00:00Z'));assert.equal(override.overdueRequirements,0);assert.equal(override.nextAction.id,'exact','Future exact deadline overrides past date');

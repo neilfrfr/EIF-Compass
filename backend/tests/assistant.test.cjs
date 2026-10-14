@@ -25,6 +25,7 @@ const mockFetch=async(url,options)=>{
  if(String(url).includes('/events?'))return response([]);
  if(String(url).includes('/requirement_submissions?'))return response([]);
  if(String(url).includes('/sprint_feedback?'))return response([{id:'feedback-a',project_id:'project-a',sprint_id:'sprint-a',author_id:'lead-a',body:'Good sprint progress',created_at:'2026-10-04T00:00:00Z'}]);
+ if(['/projects?','/sprints?','/milestones?','/blockers?','/teams?','/team_memberships?'].some(path=>String(url).includes(path)))return response([]);
  throw new Error('Unexpected URL '+url);
 };
 const handler=createHandler({env,fetchImpl:mockFetch,now:()=>new Date('2026-10-05T10:00:00Z')});
