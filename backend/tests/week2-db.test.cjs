@@ -30,8 +30,8 @@ const [legacyTask, sharedRequirement] = [id(37), id(38)];
       alter table storage.objects enable row level security;
       grant select,insert,update,delete on storage.objects to authenticated;`);
     await exec(fs.readFileSync('backend/supabase/schema.sql', 'utf8').replace('create extension if not exists pgcrypto;', ''));
-    const week2Migration = '20261013150014_week2_data_permissions.sql';
-    const workflowMigration = '20261013170000_intern_workflows.sql';
+    const week2Migration = '20261013152305_week2_data_permissions.sql';
+    const workflowMigration = '20261013155455_intern_workflows.sql';
     const dueMigration = '20261013174145_phase3_due_notifications.sql';
     for (const file of fs.readdirSync(migrationDir).sort().filter(file => ![week2Migration,workflowMigration,dueMigration].includes(file))) {
       await exec(fs.readFileSync(migrationDir + file, 'utf8'));

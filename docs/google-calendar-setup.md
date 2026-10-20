@@ -6,7 +6,7 @@ Status: Implemented on the feature branch; automated tests and production build 
 
 Use a separate Supabase test project or branch for Preview. Preview credentials pointing to production also point uploads and deletions to production data.
 
-1. Apply the existing migrations in order if missing: `20261005_lead_workflows.sql`, `20261005_lead_removal.sql`, `20261005_restrict_helpers.sql`. Do not reapply completed migrations or the base schema.
+1. Apply the existing migrations in order if missing: `20261005135713_lead_workflows.sql`, `20261005140451_restrict_profile_helper_execution.sql`, `20261005152647_lead_removal.sql`. Do not reapply completed migrations or the base schema.
 2. Apply `backend/supabase/migrations/20261011060705_calendar_submission_bin.sql` once to the test database. It preserves existing submission links, creates private file storage and adds encrypted Google connection storage. For a fresh project, install `backend/supabase/schema.sql` first.
 3. In Google Cloud, enable **Google Calendar API**, configure a Web OAuth client and add testing lead/intern accounts to the consent audience.
 4. Choose a stable Preview branch URL. Register exactly `https://<preview-host>/api/google/callback` as an authorized redirect URI. Use the same origin when opening the app; an immutable deployment URL with a different host will fail the Origin check.
