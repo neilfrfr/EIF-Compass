@@ -7,6 +7,7 @@ import AuthGate from './AuthGate'
 import WorkManager from './WorkManager'
 import Dashboard from './Dashboard'
 import Assistant from './Assistant'
+import type {DashboardExplanation} from './Assistant'
 import GoogleCalendar from './GoogleCalendar'
 import Agenda from './Agenda'
 import InternFlows from './InternFlows'
@@ -41,8 +42,10 @@ export default function App() {
 }
 
 export function Workspace({ session }: { session: Session }) {
+  const [assistantExplanation,setAssistantExplanation]=useState<(DashboardExplanation&{scope:string})|null>(null)
   const [role, setRole] = useState<Role | null>(null)
   const [view, setView] = useState<View>(()=>new URLSearchParams(window.location.search).has('google')?'calendar':'overview')
+  useEffect(()=>{if(view!=='assistant')setAssistantExplanation(null)},[view])
   const [profile, setProfile] = useState<{ display_name?: string; role?: Role; team_name?: string; cohort_id?: string } | null>(null)
   const [loadingData, setLoadingData] = useState(false)
   const [connected, setConnected] = useState(false)
@@ -142,7 +145,7 @@ export function Workspace({ session }: { session: Session }) {
         <div className="cohort-switch"><span className="cohort-dot"/><span>Fellowship workspace</span><Icon name="chevron" size={15}/></div>
         <div className="side-label">WORKSPACE</div>
         <nav className="side-nav" aria-label="Main navigation">
-          {activeNav.map(item => <button key={item.id} aria-label={item.label} className={`nav-item ${view === item.id ? 'selected' : ''}`} onClick={() => setView(item.id)}><Icon name={item.icon}/><span>{item.label}</span></button>)}
+          {activeNav.map(item => <button key={item.id} aria-label={item.label} className={`nav-item ${view === item.id ? 'selected' : ''}`} onClick={() => {setAssistantExplanation(null);setView(item.id)}}><Icon name={item.icon}/><span>{item.label}</span></button>)}
         </nav>
         <div className="side-spacer"/>
         <button className="profile-card" onClick={() => void signOut()} title="Sign out" aria-label="Sign out"><div className="avatar avatar-lilac">{initials(displayName)}</div><div className="profile-info"><strong>{displayName}</strong><span>Sign out</span></div><Icon name="dots" size={16}/></button>
@@ -164,7 +167,7 @@ export function Workspace({ session }: { session: Session }) {
             <div className="heading-actions"><span className="data-pill">{role === 'lead' ? 'Lead workspace' : 'Intern workspace'}</span><button className="text-button" onClick={() => setRevision(value => value + 1)}>Refresh workspace</button><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? 'Profile verified' : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
           </div>
 
-          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={setView}/> : view === 'assistant' ? <Assistant key={`${session.user.id}:${role}:${profile.cohort_id}`} client={supabase} userId={session.user.id} role={role} cohortId={profile.cohort_id} onNavigate={setView}/> : view==='calendar'?<><div className="manager-actions calendar-action">{role==='lead'&&<button className="text-button" onClick={()=>setShowEventManager(v=>!v)} aria-expanded={showEventManager}>{showEventManager?'Hide event manager':'Manage events'}</button>}<button className="text-button" onClick={()=>setShowSync(v=>!v)} aria-expanded={showSync}>{showSync?'Hide Google sync':'Sync to Google Calendar'}</button></div><Agenda client={supabase} cohortId={profile.cohort_id} revision={revision}/>{showSync&&<GoogleCalendar client={supabase} cohortId={profile.cohort_id}/ >}{role==='lead'&&showEventManager&&<WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>}</>:['projects','feedback','blockers','notifications'].includes(view)?<InternFlows client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>:<WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
+          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={setView} onExplain={action=>{setAssistantExplanation({question:`Explain why “${action.title}” is my next recommended action, using its recorded reason and deadline. Give a practical first step.`,id:action.id,view:action.view,scope:`${session.user.id}:${role}:${profile.cohort_id}`});setView('assistant')}}/> : view === 'assistant' ? <Assistant key={`${session.user.id}:${role}:${profile.cohort_id}`} client={supabase} userId={session.user.id} role={role} cohortId={profile.cohort_id} onNavigate={setView} initialExplanation={assistantExplanation?.scope===`${session.user.id}:${role}:${profile.cohort_id}`?assistantExplanation:undefined}/> : view==='calendar'?<><div className="manager-actions calendar-action">{role==='lead'&&<button className="text-button" onClick={()=>setShowEventManager(v=>!v)} aria-expanded={showEventManager}>{showEventManager?'Hide event manager':'Manage events'}</button>}<button className="text-button" onClick={()=>setShowSync(v=>!v)} aria-expanded={showSync}>{showSync?'Hide Google sync':'Sync to Google Calendar'}</button></div><Agenda client={supabase} cohortId={profile.cohort_id} revision={revision}/>{showSync&&<GoogleCalendar client={supabase} cohortId={profile.cohort_id}/ >}{role==='lead'&&showEventManager&&<WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>}</>:['projects','feedback','blockers','notifications'].includes(view)?<InternFlows client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>:<WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
 
           <footer className="page-footer"><span>EIF COMPASS <span className="footer-sep">·</span> FELLOWSHIP COHORT 2026</span><span>Small steps, meaningful progress.</span></footer>
         </div>

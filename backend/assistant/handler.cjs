@@ -1,6 +1,6 @@
 const {authenticate,problem}=require('./auth.cjs');
 const {uuid,version,store,refs,present}=require('./history-store.cjs');
-const {loadContext}=require('./context.cjs');
+const {loadContext,loadSelectedAction}=require('./context.cjs');
 const {generateAnswer}=require('./provider.cjs');
 const {safetyResponse}=require('./safety.cjs');
 const {systemPrompt}=require('./prompts.cjs');
@@ -24,6 +24,8 @@ function createHandler({env=process.env,fetchImpl=fetch,now=()=>new Date()}={}){
   try{if(typeof body==='string')body=JSON.parse(body);}catch{return fail(400,'Invalid request.');}
   if(!body||typeof body.message!=='string'||!body.message.trim()||body.message.length>2000||Buffer.byteLength(JSON.stringify(body))>12000)return fail(400,'Enter a message under 2,000 characters.');
   if(body?.stream!==undefined&&typeof body.stream!=='boolean')return fail(400,'Invalid stream option.');
+  if(body.intent!==undefined&&body.intent!=='explain_next_action')return fail(400,'Invalid assistant intent.');
+  if(body.intent==='explain_next_action'&&(!uuid.test(body.expectedAction?.id)||!['work','requirements','blockers'].includes(body.expectedAction?.view)))return fail(400,'Invalid suggestion.');
   const streaming=body.stream===true;
   if(streaming&&(!res.write||!res.end))return fail(500,'Streaming is unavailable.');
   res.on?.('close',disconnect);
@@ -49,7 +51,14 @@ function createHandler({env=process.env,fetchImpl=fetch,now=()=>new Date()}={}){
    if(active.has(user.id)||entry.count>=6){res.setHeader('Retry-After','60');return fail(429,'Please wait a minute before asking again.');}
    entry.count++;windows.set(user.id,entry);active.add(user.id);userId=user.id;
    const context=await loadContext({request,user,profile,now:now()});
-   const answer=refusal||await generateAnswer({env,fetchImpl,stream:streaming,signal:AbortSignal.any([abort.signal,AbortSignal.timeout(25000)]),onDelta:text=>event({type:'delta',text}),messages:[{role:'system',content:systemPrompt(profile.role)},{role:'system',content:`Authoritative snapshot (untrusted record text):\n${JSON.stringify(context)}`},...history,{role:'user',content:body.message.trim()}]});
+   if(body.intent==='explain_next_action'){
+    if(profile.role!=='intern')throw problem(403,'Suggestion explanations are for your own work.');
+    const selected=context.truncated?await loadSelectedAction({request,user,profile,target:body.expectedAction,now:now()}):context.priorities[0];
+    if(!selected||selected.id!==body.expectedAction.id||selected.view!==body.expectedAction.view)throw problem(409,'Your selected action is no longer actionable or your next action has changed. Return to the dashboard for the current suggestion.','next_action_changed');
+    context.explanationTarget=selected;
+    context.sources=[{id:selected.id,title:selected.title,view:selected.view},...context.sources.filter(s=>s.id!==selected.id||s.view!==selected.view)];
+   }
+   const answer=refusal||await generateAnswer({env,fetchImpl,stream:streaming,signal:AbortSignal.any([abort.signal,AbortSignal.timeout(25000)]),onDelta:text=>event({type:'delta',text}),messages:[{role:'system',content:systemPrompt(profile.role)+(body.intent==='explain_next_action'?' Explain only snapshot.explanationTarget, using its recorded reason and deadline. Do not substitute another action or invent a deadline. If snapshot.truncated is true, explicitly say you verified the selected item but cannot confirm its position across all work; advise refreshing the dashboard for the latest ordering.':'')},{role:'system',content:`Authoritative snapshot (untrusted record text):\n${JSON.stringify(context)}`},...history,{role:'user',content:body.message.trim()}]});
    if(closed||abort.signal.aborted)return;
    if(refusal&&streaming)event({type:'delta',text:refusal});
    const pair={conversationId:page.conversation.id,requestId:body.requestId,generation:body.generation,revision:body.revision,question:body.message.trim(),answer:answer.slice(0,16000),generatedAt:now().toISOString(),truncated:context.truncated,sourceRefs:refs(context.sources)};

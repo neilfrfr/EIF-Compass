@@ -5,17 +5,19 @@ import type {Role,View} from './data'
 import {historyRequest,HistoryError} from './assistant-history'
 import type {Conversation,Turn,Unsaved,Page} from './assistant-history'
 import './assistant.css'
-type Props={client:SupabaseClient;userId:string;role:Role;cohortId:string;onNavigate:(view:View)=>void}
+export type DashboardExplanation={question:string;id:string;view:View}
+type Props={client:SupabaseClient;userId:string;role:Role;cohortId:string;onNavigate:(view:View)=>void;initialExplanation?:DashboardExplanation}
 const starters={
  intern:[['Plan my day','Plan my day using my actual deadlines. Explain the top three next steps.'],['Explain my requirements','Explain my outstanding requirements and what I should prepare.'],['Prepare for check-in','Help me prepare an honest progress update and questions for my lead.']],
  lead:[['Brief my cohort','Give me a concise cohort briefing: overdue work, pending reviews, and suggested support actions.'],['Plan the next check-in','Draft an agenda for the next cohort check-in based on current work. Do not invent a date.'],['Draft cohort email','Draft a supportive email about upcoming deadlines. Use placeholders for unknown recipients. Do not send it.']],
 } satisfies Record<Role,string[][]>
-export default function Assistant({client,userId,role,cohortId,onNavigate}:Props){
+export default function Assistant({client,userId,role,cohortId,onNavigate,initialExplanation}:Props){
  const [turns,setTurns]=useState<Turn[]>([]),[conversation,setConversation]=useState<Conversation|null>(null)
  const [input,setInput]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[paging,setPaging]=useState(false)
  const [error,setError]=useState(''),[loadError,setLoadError]=useState(false),[pending,setPending]=useState(''),[unsaved,setUnsaved]=useState<Unsaved|null>(null)
  const [partial,setPartial]=useState<{requestId:string;question:string;answer:string}|null>(null),[incomplete,setIncomplete]=useState(false)
  const [hasMore,setHasMore]=useState(false),[before,setBefore]=useState<number|null>(null),[confirm,setConfirm]=useState(false)
+ const explanationStarted=useRef(false),loadedScope=useRef<number|null>(null)
  const controller=useRef<AbortController|null>(null),loadController=useRef<AbortController|null>(null),epoch=useRef(0),inFlight=useRef(false)
  const log=useRef<HTMLDivElement|null>(null),end=useRef<HTMLDivElement|null>(null)
  const unsavedRef=useRef(unsaved);unsavedRef.current=unsaved
@@ -28,7 +30,7 @@ export default function Assistant({client,userId,role,cohortId,onNavigate}:Props
    const query=older?`?before=${before}&generation=${conversation!.generation}`:''
    const page:Page=await historyRequest(client,'/api/assistant/history'+query,'GET',undefined,abort.signal)
    if(abort.signal.aborted||scope!==epoch.current)return
-   setConversation(page.conversation);setHasMore(page.has_more);setBefore(page.next_before)
+   loadedScope.current=scope;setConversation(page.conversation);setHasMore(page.has_more);setBefore(page.next_before)
    setTurns(previous=>older?[...page.turns,...previous.filter(t=>!page.turns.some(p=>p.requestId===t.requestId))]:page.turns)
    if(!older){setError('');setLoadError(false);if(page.turns.some(t=>t.requestId===unsavedRef.current?.requestId))setUnsaved(null);setPartial(previous=>previous&&page.turns.some(t=>t.requestId===previous.requestId)?null:previous)}
    if(older)requestAnimationFrame(()=>{if(log.current&&scope===epoch.current)log.current.scrollTop=oldTop+log.current.scrollHeight-oldHeight})
@@ -36,7 +38,7 @@ export default function Assistant({client,userId,role,cohortId,onNavigate}:Props
   finally{if(!abort.signal.aborted&&scope===epoch.current){setLoading(false);setPaging(false)}}
  }
  useEffect(()=>{
-  epoch.current++;controller.current?.abort();loadController.current?.abort();inFlight.current=false
+  epoch.current++;explanationStarted.current=false;loadedScope.current=null;controller.current?.abort();loadController.current?.abort();inFlight.current=false
   setPartial(null);setIncomplete(false);setTurns([]);setConversation(null);setUnsaved(null);setInput('');setError('');setBusy(false);setPending('');setConfirm(false);setPaging(false)
   void load()
   const focus=()=>{if(!inFlight.current)void load()}
@@ -46,13 +48,14 @@ export default function Assistant({client,userId,role,cohortId,onNavigate}:Props
   // eslint-disable-next-line react-hooks/exhaustive-deps
  },[client,userId,role,cohortId])
  useEffect(()=>{if(!paging)end.current?.scrollIntoView?.({block:'nearest',behavior:'auto'})},[busy,unsaved])
+ useEffect(()=>{if(!initialExplanation||explanationStarted.current||loadedScope.current!==epoch.current||!conversation||loading||loadError||busy||unsaved||partial)return;explanationStarted.current=true;void ask(initialExplanation.question,initialExplanation)},[initialExplanation,conversation,loading,loadError,busy,unsaved,partial])
  const blocked=busy||loading||loadError||paging||!conversation||!!unsaved||!!partial
- async function ask(question:string){
+ async function ask(question:string,target?:DashboardExplanation){
   if(inFlight.current||blocked||!question.trim()||!conversation)return
   inFlight.current=true;setBusy(true);setError('');setPending(question);setIncomplete(false);const requestId=crypto.randomUUID();setPartial({requestId,question,answer:''})
   const abort=new AbortController(),scope=epoch.current;controller.current=abort
   try{
-   const result=await historyRequest(client,'/api/assistant','POST',{message:question.trim(),stream:true,conversationId:conversation.id,requestId,generation:conversation.generation,revision:conversation.revision},abort.signal,text=>{if(!abort.signal.aborted&&scope===epoch.current)setPartial(previous=>previous?{...previous,answer:(previous.answer+text).slice(0,16000)}:previous)})
+   const result=await historyRequest(client,'/api/assistant','POST',{message:question.trim(),...(target?{intent:'explain_next_action',expectedAction:{id:target.id,view:target.view}}:{}),stream:true,conversationId:conversation.id,requestId,generation:conversation.generation,revision:conversation.revision},abort.signal,text=>{if(!abort.signal.aborted&&scope===epoch.current)setPartial(previous=>previous?{...previous,answer:(previous.answer+text).slice(0,16000)}:previous)})
    if(abort.signal.aborted||scope!==epoch.current)return
    if(typeof result.answer!=='string')throw new Error('The assistant returned an invalid response.')
    const turn:Unsaved={conversationId:conversation.id,requestId:result.requestId,question:question.trim(),answer:result.answer,generatedAt:result.generatedAt,truncated:result.truncated,sourceRefs:result.sourceRefs||[],sources:result.sources||[],generation:conversation.generation,revision:conversation.revision}
