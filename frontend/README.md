@@ -29,4 +29,4 @@ Output is `frontend/dist` relative to the repository root. The production Vercel
 
 `src/lib/supabase.ts` is a browser client and belongs here. It calls Supabase Auth and the Data API; database schema and policies are in [../backend/supabase/schema.sql](../backend/supabase/schema.sql). The login gate controls UI visibility and database RLS controls access to records.
 
-Dashboard.tsx loads permitted cohort records; dashboard.ts derives task completion, individual requirement statuses, overdue work, review queues, teams, and date-based suggestions. Lead and intern overviews have different layouts. Suggestions use deadline rules; an AI assistant and blocker-based ranking are not implemented.
+Dashboard.tsx loads permitted cohort records; dashboard.ts derives task completion, individual requirement statuses, overdue work, review queues, teams, and date-based suggestions. Lead and intern overviews have different layouts. Suggestions use deadline rules; the AI assistant uses a fresh permitted snapshot and the same deadline/blocker ranking. Assistant conversations restore from private Supabase history; see the migration rollout in `docs/ai/assistant-framework.md`.

@@ -147,7 +147,7 @@ The login and role dashboards use a teal, sage, and white palette derived from t
 
 The AI assistant supports intern daily plans and requirement/check-in guidance, and lead cohort briefings, review summaries, and communication drafts. A server-side OpenRouter endpoint verifies Supabase sessions and fetches permitted records under RLS. Email and calendar suggestions are drafts only; Calendar now has a separate, user-confirmed own-account sync flow; assistant chat does not execute it.
 
-Set server-only `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY` in root `.env.local` locally and Vercel Environment Variables when deployed. Never use a `VITE_` prefix for the OpenRouter key. Run `npm run dev:api` alongside `npm run dev` locally. See [assistant framework and setup](docs/ai/assistant-framework.md) for limits, data handling, prompts, and planned Google integration.
+Set server-only `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY` in root `.env.local` locally and Vercel Environment Variables when deployed. Never use a `VITE_` prefix for the OpenRouter key. Run `npm run dev:api` alongside `npm run dev` locally. Conversations are saved privately per account, role and cohort and restored across sessions after the history migration is deployed. See [assistant framework and setup](docs/ai/assistant-framework.md) for limits, data handling, prompts, and planned Google integration.
 
 ### Google Calendar and editable submission bin
 

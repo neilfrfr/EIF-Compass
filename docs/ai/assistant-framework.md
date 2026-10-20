@@ -6,12 +6,12 @@ Interns receive personal daily plans, requirement explanations, and check-in pre
 
 ## Request flow
 
-1. The React assistant obtains the current Supabase access token and sends the question plus at most six short history messages to `/api/assistant`.
+1. The React assistant obtains the current Supabase access token and sends the question, request UUID, and expected conversation identity/version to `/api/assistant`.
 2. The server validates the token using Supabase Auth and reads the user's role/cohort from their profile. Browser role, cohort, and context fields are ignored.
 3. Queries use the user's bearer token and publishable key, retaining RLS. Intern context is additionally filtered to own/shared tasks and requirements, own submissions, cohort events, and own profile. Leads receive permitted cohort records. No service-role key is used.
 4. The context module computes deadline counts and priority order in Philippine time. It bounds record counts and text length; truncated snapshots are explicitly labeled partial.
-5. The prompt module supplies role-specific instructions, the data snapshot, history, and question to OpenRouter. Record instructions are treated as untrusted text. Generated content remains advice, never authority to perform an action.
-6. The frontend renders plain text and server-derived record-list navigation. The source list describes available context, not a claim that each listed record was cited by the model. Refreshing/navigating away clears the memory-only conversation.
+5. The prompt module supplies role-specific instructions, the data snapshot, last six messages loaded from saved history (1,000 characters each), and question to OpenRouter. Record instructions are treated as untrusted text. Generated content remains advice, never authority to perform an action.
+6. The frontend renders plain text and server-derived record-list navigation. The source list describes available context, not a claim that each listed record was cited by the model. Completed question/answer pairs are saved atomically in Supabase and restored on return. Older messages page in groups of 20; sources are resolved again under current RLS.
 
 ## Modules
 
@@ -19,7 +19,7 @@ Interns receive personal daily plans, requirement explanations, and check-in pre
 - `backend/assistant/handler.cjs`: validation, authentication, orchestration, limits, and provider error handling.
 - `backend/assistant/context.cjs`: permitted snapshot and deterministic counts/priorities.
 - `backend/assistant/prompts.cjs`: shared boundaries and lead/intern prompts.
-- `frontend/src/Assistant.tsx`: role starters, conversation, sources, stop/reset, and retry states.
+- `frontend/src/Assistant.tsx`: role starters, conversation, sources, paged restoration, confirmed clear, and save-only retry states.
 
 ## Configuration and local use
 
@@ -31,7 +31,7 @@ On Vercel, add the four server variables in project Environment Variables and re
 
 ## Bounds and deployment considerations
 
-The snapshot includes at most 40 tasks, 40 requirements, 40 member profiles, 20 upcoming events, and 160 submission statuses. Queries prioritize earliest deadlines; all derived counts explicitly become partial when any bound is reached. This is not a replacement for full dashboard metrics. Emails, submission URLs, and auth credentials are excluded from model context. Relevant task/requirement text and member names are sent to the chosen OpenRouter provider; the UI discloses this. No prompts or conversations are persisted or logged by application code.
+The snapshot includes at most 40 tasks, 40 requirements, 40 member profiles, 20 upcoming events, and 160 submission statuses. Queries prioritize earliest deadlines; all derived counts explicitly become partial when any bound is reached. This is not a replacement for full dashboard metrics. Emails, submission URLs, and auth credentials are excluded from model context. Relevant task/requirement text and member names are sent to the chosen OpenRouter provider; the UI discloses this. Conversations are persisted privately in Supabase per account, role and cohort until Clear conversation or account/cohort deletion. Cohort leads cannot read intern transcripts. Authorized database administrators can access database contents. Application code does not log chat text or store it in browser storage. Provider retention follows the configured OpenRouter/provider policies.
 
 Maximum question length: 2,000 characters. Maximum history: six messages of 1,000 characters each. Provider output: 1,200 tokens. Database fetch timeout: eight seconds per request. Provider timeout: 25 seconds. Per-user protection is six attempts/minute and one in-flight request **per server instance**; it is not a distributed quota. Configure an OpenRouter key spending limit before exposing this to a larger cohort. A durable quota or platform rate limit is the next production hardening step. Stopping a browser response does not guarantee cancellation of provider processing or billing.
 
@@ -46,3 +46,11 @@ Official references: [OpenRouter quickstart](https://openrouter.ai/docs/quicksta
 ### Empty model responses
 
 Requests disable optional reasoning while retaining the 1,200-token cap. Models with mandatory reasoning may still exhaust that allowance before returning visible text. The handler accepts plain text and text-content blocks, never substitutes private reasoning for an answer, and distinguishes token exhaustion from content filtering. On repeated failures, inspect the corresponding OpenRouter Activity entry or select a fixed model without mandatory reasoning. No automatic retry or paid fallback is performed.
+
+## Persistent history rollout
+
+Apply `backend/supabase/migrations/20261020115000_assistant_history.sql` to the intended Supabase environment before deploying this code. Review the target project first; this change does not apply the migration automatically. The migration is additive and creates private conversation/turn tables, SELECT-only RLS, and constrained caller-JWT RPCs. Deploy `/api/assistant` and `/api/assistant/history` together with the frontend. A missing migration blocks new questions with a recoverable history error rather than silently falling back to memory-only chat.
+
+`GET /api/assistant/history` restores the latest 20 complete turns; `before` + `generation` page earlier turns. POST retries saving the existing question/answer without calling OpenRouter; DELETE requires confirmation in the UI and compares conversation ID, generation and revision. Database row locking serializes mutations; clear increments generation so old pending responses cannot restore cleared content. Concurrent revision changes require reloading before an explicit retry. An unsaved answer stays visible during reload and can be discarded separately without deleting saved history.
+
+After migration and deployment, smoke-test with an intern and lead account: ask → leave/sign out → sign back in → verify restoration; open another browser/device; page a transcript exceeding 20 pairs; clear with cancellation and confirmation; verify another user's transcript is inaccessible. Also simulate a save failure, a second-tab revision change and a second-tab clear during generation. Automated tests use isolated PostgreSQL and mocked provider/browser boundaries; they do not establish live environment readiness. Previously lost memory-only sessions cannot be recovered. Rolling code back leaves additive tables intact; avoid dropping transcripts during rollback.
