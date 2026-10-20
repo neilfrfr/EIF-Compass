@@ -6,7 +6,7 @@ For a fresh database, install `supabase/schema.sql`, then the existing lead work
 
 ## Week 2 data foundation
 
-Apply `supabase/migrations/20261013150014_week2_data_permissions.sql` after the 20261011 migration. It adds teams, intern memberships, projects, sprints, milestones, feedback, blockers, comments, and notifications. Existing tasks keep their legacy labels and gain nullable `project_id`, `sprint_id`, and `milestone_id`. Composite foreign keys enforce cohort, project, sprint, and milestone consistency. A linked task's assignee must be a project team member. Legacy unlinked task access stays unchanged.
+Apply `supabase/migrations/20261013152305_week2_data_permissions.sql` after the 20261011 migration. It adds teams, intern memberships, projects, sprints, milestones, feedback, blockers, comments, and notifications. Existing tasks keep their legacy labels and gain nullable `project_id`, `sprint_id`, and `milestone_id`. Composite foreign keys enforce cohort, project, sprint, and milestone consistency. A linked task's assignee must be a project team member. Legacy unlinked task access stays unchanged.
 
 Leads manage teams, memberships, projects, sprints, and milestones only in their cohort. Project team members read linked tasks and feedback; only an assigned intern changes their task status. Blockers stay private to reporter and cohort leads, including comments. Notification clients can only read their own rows and mark `read_at`; server-side notice generation is a later phase. New tables are protected by RLS and explicit grants. `team_name` and `project_name` remain display labels, never permission sources.
 
