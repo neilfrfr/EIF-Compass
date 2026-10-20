@@ -11,7 +11,7 @@ const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'})
 Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true,requestAnimationFrame:fn=>fn()})
 const root=createRoot(document.getElementById('root')),requests=[],navigated=[]
 const client={auth:{getSession:async()=>({data:{session:{access_token:'verified-session'}},error:null})}}
-let conversation={id:'c',generation:0,revision:0},turns=[],failLoad=false,failSave=false,failClear=false,role='intern',deferred=null,pageDeferred=null,loadDeferred=null,hasMore=false
+let conversation={id:'c',generation:0,revision:0},turns=[],failLoad=false,failSave=false,failClear=false,role='intern',deferred=null,pageDeferred=null,loadDeferred=null,hasMore=false,streamMode=null,finishStream=null
 const pair=b=>({requestId:b.requestId,question:b.message||b.question,answer:'<script>bad()</script> Prioritize reflection.',sources:[{id:'task',title:'Reflection',view:'work'}],sourceRefs:[],generatedAt:'2026-10-20T12:00:00Z',truncated:false})
 globalThis.fetch=async(url,options)=>{
  const body=options.body?JSON.parse(options.body):{};requests.push({url,method:options.method,body});assert.equal(options.headers.Authorization,'Bearer verified-session')
@@ -21,8 +21,10 @@ globalThis.fetch=async(url,options)=>{
  if(options.method==='GET')return Response.json(failLoad?{error:'History unavailable'}:{conversation,turns,has_more:hasMore,next_before:hasMore?2:null},{status:failLoad?503:200})
  if(options.method==='DELETE'){if(failClear)return Response.json({error:'Clear failed'},{status:503});conversation={...conversation,generation:conversation.generation+1,revision:0};turns=[];return Response.json({conversation})}
  const turn=pair(body)
+ if(url==='/api/assistant'&&streamMode==='deferred')return new Response(new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode(JSON.stringify({type:'delta',text:'First live token'})+'\n'));finishStream=()=>{conversation={...conversation,revision:conversation.revision+1};const completeTurn={...turn,answer:'First live token and completed answer'};turns.push(completeTurn);controller.enqueue(new TextEncoder().encode(JSON.stringify({type:'complete',result:{...completeTurn,turn:completeTurn,conversation,historySaved:true}})+'\n'));controller.close()}}}),{headers:{'content-type':'application/x-ndjson'}})
+ if(url==='/api/assistant'&&streamMode==='partial')return new Response(JSON.stringify({type:'delta',text:'Partial streamed answer'})+'\n'+JSON.stringify({type:'error',error:'Stream interrupted'})+'\n',{headers:{'content-type':'application/x-ndjson'}})
  if(failSave&&url==='/api/assistant')return Response.json({...turn,historySaved:false,saveError:'history_unavailable'})
- conversation={...conversation,revision:conversation.revision+1};turns=[...turns,turn];return Response.json({...turn,turn,conversation,historySaved:true})
+ conversation={...conversation,revision:conversation.revision+1};turns=[...turns,turn];if(url==='/api/assistant'&&streamMode==='ok')return new Response(JSON.stringify({type:'delta',text:'Streamed 🌱 answer'})+'\n'+JSON.stringify({type:'complete',result:{...turn,turn,conversation,historySaved:true}})+'\n',{headers:{'content-type':'application/x-ndjson'}});return Response.json({...turn,turn,conversation,historySaved:true})
 }
 const render=()=>act(async()=>root.render(React.createElement(Assistant,{client,userId:'user-'+role,role,cohortId:'cohort',onNavigate:v=>navigated.push(v)})))
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent===text)
@@ -57,6 +59,11 @@ await click('Reload history');assert.ok(button('Retry saving').disabled);await c
 // Missing migration/network errors block new generation until history recovers.
 failLoad=true;await click('Reload history');assert.ok(button('Plan my day').disabled);assert.match(document.body.textContent,/History unavailable/)
 failLoad=false;await click('Retry loading history');assert.ok(!button('Plan my day').disabled)
+// Streaming keeps partial output visibly incomplete and prevents saving it.
+streamMode='deferred';await click('Plan my day');assert.match(document.body.textContent,/First live token/);assert.match(document.body.textContent,/Receiving response/);assert.ok(button('Plan my day').disabled);await act(async()=>finishStream());assert.match(document.body.textContent,/completed answer/);assert.ok(!document.body.textContent.includes('Receiving response'));
+streamMode='ok';await click('Plan my day');assert.ok(!document.body.textContent.includes('Receiving response'));
+streamMode='partial';const savedCount=turns.length;await click('Plan my day');assert.match(document.body.textContent,/Partial streamed answer/);assert.match(document.body.textContent,/Incomplete answer/);assert.equal(turns.length,savedCount);assert.ok(!button('Retry saving'));
+await click('Retry loading history');assert.ok(button('Plan my day').disabled);await click('Discard incomplete answer');assert.ok(!button('Plan my day').disabled);streamMode=null;
 // In-flight old-scope answer must never appear in a newly selected account/role.
 let resolve;deferred=new Promise(r=>resolve=r);await click('Plan my day');role='lead';turns=[];conversation={id:'lead',generation:0,revision:0};await render()
 await act(async()=>resolve(Response.json({...pair({requestId:'late',message:'old private question'}),answer:'old private answer',historySaved:true,turn:pair({requestId:'late',message:'old private question'}),conversation})))

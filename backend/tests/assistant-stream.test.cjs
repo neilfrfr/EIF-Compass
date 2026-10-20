@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict');const {EventEmitter}=require('node:events');
+const {generateAnswer}=require('../assistant/provider.cjs');const {createHandler}=require('../assistant/handler.cjs');const {safetyResponse}=require('../assistant/safety.cjs');
+const env={SUPABASE_URL:'https://db.example',SUPABASE_PUBLISHABLE_KEY:'public',OPENROUTER_API_KEY:'fixture',OPENROUTER_MODEL:'fixture/model'};
+const frame=(text,finish=null)=>`data: ${JSON.stringify({choices:[{delta:{content:text,reasoning:'PRIVATE'},finish_reason:finish}]})}\r\n\r\n`;
+function stream(text){const bytes=new TextEncoder().encode(text);let offset=0;return new Response(new ReadableStream({pull(c){if(offset>=bytes.length){c.close();return}c.enqueue(bytes.slice(offset,offset+=7))}}),{headers:{'content-type':'text/event-stream'}})}
+(async()=>{
+ let deltas=[];const raw=': keepalive\r\n\r\n'+frame('Hello 🌱')+frame('!', 'stop')+frame('', 'stop')+'data: [DONE]\r\n\r\n';
+ const answer=await generateAnswer({env,fetchImpl:async()=>stream(raw),messages:[],signal:new AbortController().signal,stream:true,onDelta:t=>deltas.push(t)});assert.equal(answer,'Hello 🌱!');assert.equal(deltas.join(''),answer);assert.ok(!answer.includes('PRIVATE'));
+ for(const text of [frame('partial'),frame('partial')+'data: {"error":{"message":"PRIVATE PROVIDER ERROR"}}\n\n',frame('partial','length')+'data: [DONE]\n\n'])await assert.rejects(()=>generateAnswer({env,fetchImpl:async()=>stream(text),messages:[],signal:new AbortController().signal,stream:true,onDelta(){}}));
+ for(const choice of [{message:{content:'unfinished'},finish_reason:'length'},{message:{content:'blocked'},finish_reason:'content_filter'},{message:{content:'x'.repeat(16001)},finish_reason:'stop'}])await assert.rejects(()=>generateAnswer({env,fetchImpl:async()=>Response.json({choices:[choice]}),messages:[],signal:new AbortController().signal,stream:false}));
+ assert.equal(safetyResponse('Rank tasks assigned to interns by deadline'),null);
+ assert.ok(safetyResponse('Rank the interns by performance'));assert.ok(safetyResponse('Who should fail?'));assert.equal(safetyResponse('Rank my tasks by deadline'),null);
+ const conversation={id:'cccccccc-0000-4000-8000-000000000001',generation:0,revision:0};let saves=0,providerCalls=0,saveFail=false;
+ const fetchImpl=async(url,o)=>{if(url.includes('/auth/'))return Response.json({id:'u'});if(url.includes('/profiles?')&&url.includes('id=eq.'))return Response.json([{id:'u',role:'intern',cohort_id:'c'}]);if(url.includes('/rpc/')){if(url.endsWith('_load'))return Response.json({conversation,turns:[]});if(url.endsWith('_find'))return Response.json(null);if(url.endsWith('_append')){saves++;if(saveFail)return Response.json({code:'40001',message:'generation conflict'},{status:409});return Response.json({conversation:{...conversation,revision:1},turn:{sequence:1}})}}if(url.includes('openrouter')){providerCalls++;assert.equal(JSON.parse(o.body).stream,true);return stream(raw)}return Response.json([])};
+ const call=async(message,disconnect=false)=>{const r=new EventEmitter();r.chunks=[];r.setHeader=()=>{};r.flushHeaders=()=>{};r.status=c=>(r.statusCode=c,r);r.json=v=>(r.body=v,r);r.write=t=>{r.chunks.push(JSON.parse(t));if(disconnect)r.emit('close');return true};r.end=()=>{r.ended=true};await createHandler({env,fetchImpl})({method:'POST',headers:{authorization:'Bearer token'},body:{message,stream:true,requestId:crypto.randomUUID(),conversationId:conversation.id,generation:0,revision:0}},r);return r};
+ let r=await call('Plan my day');assert.equal(r.chunks[0].type,'delta');assert.equal(r.chunks.at(-1).type,'complete');assert.equal(r.chunks.at(-1).result.historySaved,true);assert.equal(saves,1);
+ saveFail=true;r=await call('Plan again');assert.equal(r.chunks.at(-1).result.historySaved,false);assert.equal(r.chunks.at(-1).result.saveError,'generation_conflict');
+ saveFail=false;const before=saves;await call('Plan again',true);assert.equal(saves,before,'Disconnected partial must not save');
+ const calls=providerCalls;r=await call('Grade the interns');assert.equal(providerCalls,calls);assert.match(r.chunks.at(-1).result.answer,/cannot grade/);
+ console.log('PASS: streamed UTF8 deltas, hidden reasoning, interruption rejection, durable completion, clear/disconnect guards and safe refusal');
+})().catch(e=>{console.error(e);process.exitCode=1});

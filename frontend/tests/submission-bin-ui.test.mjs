@@ -17,4 +17,12 @@ assert.ok(![...document.querySelectorAll('button')].some(b=>/Unsubmit|Submit for
 assert.equal(document.querySelector('a').href,'https://docs.google.com/document/d/test')
 await act(async()=>root.render(React.createElement(Bin,{client,role:'lead',userId:'lead',requirement:{id:'r',due_date:'2099-01-01'},submission:{requirement_id:'r',user_id:'u',status:'completed'},onChanged(){}})))
 assert.ok([...document.querySelectorAll('button')].some(b=>b.textContent==='Request changes'),'Lead must be able to reopen approved work')
+let changed=0
+const draftClient={from(table){return {select(){return this},eq(){return this},order(){return this},upsert(payload){this.payload=payload;return this},single(){return Promise.resolve({data:this.payload,error:null})},then(resolve){return Promise.resolve({data:[],error:null}).then(resolve)}}}}
+await act(async()=>root.render(React.createElement(Bin,{client:draftClient,role:'intern',userId:'u',requirement:{id:'future',due_date:'2099-01-01'},onChanged(){changed++}})))
+assert.match(document.body.textContent,/Upcoming/)
+await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Save draft').click())
+assert.match(document.body.textContent,/Pending/);assert.match(document.body.textContent,/Draft saved/);assert.equal(changed,1,'Parent must refresh status filters after a saved draft')
+await act(async()=>root.render(React.createElement(Bin,{client,role:'intern',userId:'u',requirement:{id:'late',due_date:'2000-01-01'},onChanged(){}})))
+assert.match(document.body.textContent,/Overdue/)
 await act(async()=>root.unmount());console.log('PASS: legacy link display and no editing actions after cutoff')

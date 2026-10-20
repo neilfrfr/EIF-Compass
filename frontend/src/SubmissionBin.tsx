@@ -1,10 +1,12 @@
-import {useEffect,useState} from 'react'
+import {requirementState,requirementLabels} from '../../shared/workflow-rules.mjs'
+import {useEffect,useRef,useState} from 'react'
 import type {SupabaseClient} from '@supabase/supabase-js'
 import {canEditSubmission,submissionCutoff,submissionLinks,validSubmissionLink,validateAttachment} from './submissions'
 import type {SubmissionRow,SubmissionRequirement} from './submissions'
 type Attachment={id:string;name:string;object_path:string;size:number;uploaded:boolean}
 type Props={client:SupabaseClient;role:string;userId:string;requirement:SubmissionRequirement&{id:string};submission?:SubmissionRow;onChanged:()=>void}
 export default function SubmissionBin({client,role,userId,requirement,submission,onChanged}:Props){
+ const changed=useRef(false)
  const owner=submission?.user_id||userId
  const [current,setCurrent]=useState(submission)
  const [links,setLinks]=useState(submission?submissionLinks(submission).join('\n'):'')
@@ -18,17 +20,17 @@ export default function SubmissionBin({client,role,userId,requirement,submission
  const cutoff=submissionCutoff(requirement),expired=!!cutoff&&clock.getTime()>=Date.parse(cutoff)
  const editable=role==='intern'&&owner===userId&&canEditSubmission(requirement,current,clock)
  const message=(e:unknown)=>e&&typeof e==='object'&&'message'in e?String(e.message):'Could not save. Please try again.'
- async function action(work:()=>Promise<void>){if(busy)return;setBusy(true);setError('');setNotice('');try{await work();setRevision(v=>v+1)}catch(e){setError(message(e))}finally{setBusy(false)}}
+ async function action(work:()=>Promise<void>){if(busy)return;setBusy(true);setError('');setNotice('');try{await work();setRevision(v=>v+1)}catch(e){setError(message(e))}finally{setBusy(false);if(changed.current){changed.current=false;onChanged()}}}
  async function draft(){
   const values=links.split('\n').map(v=>v.trim()).filter(Boolean)
   if(values.length>10||values.some(v=>!validSubmissionLink(v)))throw new Error('Enter up to ten valid HTTP or HTTPS links, one per line.')
   const payload={requirement_id:requirement.id,user_id:userId,submission_url:values[0]||null,links:values.slice(1),note,status:'draft',reviewed_at:null}
   const {data,error}=await client.from('requirement_submissions').upsert(payload,{onConflict:'requirement_id,user_id'}).select('*').single()
-  if(error)throw error;if(!data)throw new Error('Draft was not saved.');setCurrent(data);return data as SubmissionRow
+  if(error)throw error;if(!data)throw new Error('Draft was not saved.');setCurrent(data);changed.current=true;return data as SubmissionRow
  }
  async function changeStatus(status:string){
   const {data,error}=await client.from('requirement_submissions').update({status}).eq('requirement_id',requirement.id).eq('user_id',owner).select('*').single()
-  if(error)throw error;if(!data)throw new Error('Submission was not changed.');setCurrent(data);setNotice(status==='draft'?'Unsubmitted. You can edit before the deadline.':status==='in_review'?'Submitted for lead review.':'Review saved.');onChanged()
+  if(error)throw error;if(!data)throw new Error('Submission was not changed.');setCurrent(data);setNotice(status==='draft'?'Unsubmitted. You can edit before the deadline.':status==='in_review'?'Submitted for lead review.':'Review saved.');changed.current=true
  }
  async function upload(selected:File[]){
   if(files.length+selected.length>5)throw new Error('Maximum five attachments. Remove a file before adding more.')
@@ -56,9 +58,12 @@ export default function SubmissionBin({client,role,userId,requirement,submission
   const link=document.createElement('a');link.href=data.signedUrl;link.target='_blank';link.rel='noopener noreferrer';link.click()
  }
  return <section className="submission-bin" aria-label="Submission bin" aria-busy={busy}>
-  <div className="dashboard-section-head"><h4>Submission bin</h4><span className="data-pill">{current?.status?.replaceAll('_',' ')||'Not submitted'}</span></div>
+  <div className="dashboard-section-head"><h4>Submission bin</h4><span className="data-pill">{requirementLabels[requirementState(requirement,owner,current?[current]:[],clock)]}</span></div>
   {cutoff&&<p className="manager-meta">Editing closes {new Date(cutoff).toLocaleString('en-PH',{timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'short'})} (Philippine time).</p>}
   {requirement.removing&&<p>Locked while your lead finishes removal.</p>}{expired&&<p>Locked: the deadline has passed. Your lead can still review submitted work.</p>}
+  {current?.status==='draft'&&<p>Draft saved · not submitted</p>}
+  {current?.status==='pending'&&<p>Changes requested by your lead</p>}
+  {!current&&<p>Not submitted</p>}
   {current?.status==='completed'&&!expired&&<p>Approved work is locked.</p>}
   {error&&<p role="alert" className="auth-error">{error}</p>}{notice&&<p role="status" className="manager-notice">{notice}</p>}
   {editable?<div className="submission-fields"><label>Google Workspace or other links<textarea value={links} onChange={e=>setLinks(e.target.value)} disabled={busy} placeholder="One https:// link per line"/></label><p className="manager-meta">Share Google Docs, Sheets, Slides or Drive files with your reviewing lead. Adding a link does not change Google sharing permissions.</p><label>Note<textarea value={note} onChange={e=>setNote(e.target.value)} maxLength={5000} disabled={busy}/></label><label>Upload files (up to five, 10 MiB each)<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg" disabled={busy} onChange={e=>{const selected=Array.from(e.target.files||[]);e.target.value='';void action(()=>upload(selected))}}/></label></div>:<>{current&&submissionLinks(current).map((url,i)=><p key={url}>{validSubmissionLink(url)?<a href={url} target="_blank" rel="noopener noreferrer">{i===0?'Open submission':`Open link ${i+1}`}</a>:<span>Invalid submission link</span>}</p>)}{current?.note&&<p className="submission-note">{current.note}</p>}</>}

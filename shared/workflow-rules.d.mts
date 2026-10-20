@@ -7,6 +7,8 @@ export type Milestone=DeadlineRecord&{id:string;title:string;status:string}
 export type Action={id:string;title:string;date:string|null|undefined;dueAt:string|null;exact:boolean;view:'work'|'requirements'|'blockers';reason:string}
 export function manilaDay(now:Date|string):string;
 export function deadlineInstant(record:DeadlineRecord):string|null;
-export function requirementState(record:Requirement,userId:string,submissions:Submission[],now:Date|string):string;
+export function requirementState(record:DeadlineRecord&{id:string;status?:string},userId:string,submissions:Submission[],now:Date|string):string;
 export function compareInstants(a:{id:string;at:string;kind?:string},b:{id:string;at:string;kind?:string}):number;
 export function rankActions(data:{tasks:Task[];requirements:Requirement[];submissions:Submission[];blockers?:Blocker[];milestones?:Milestone[];role:string;userId:string},now:Date|string):Action[];
+
+export const requirementLabels:Record<string,string>;

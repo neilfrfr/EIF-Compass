@@ -1,0 +1,15 @@
+# EIF Compass PRD version 2.2 implementation update
+
+The existing PRD document was updated on October 20 before these code changes. It records implemented P0 workflows, approved private chat retention and separate Google Calendar scope, the hosted cohort size, original acceptance gates, and the remaining backlog. The document is named EIF-Compass-PRD-Updated.docx.
+
+This branch implements the three immediate priorities. Deployment and real-provider acceptance remain separate from code completion.
+
+1. Explicit AI policy forbids grading, ranking, scoring, penalizing interns and pass/fail decisions. Obvious requests to evaluate people receive a deterministic refusal; the system policy covers broader phrasing. Prioritizing tasks remains allowed. This narrow classifier is not a general moderation guarantee.
+2. Browser requests opt into a provider SSE stream translated to newline-delimited JSON. Only plain-text answer content is forwarded, never reasoning or raw provider error details. An explicit stop plus terminal event is required for streamed completion. Partial/error/oversize answers are not saved. Completed pairs use existing request IDs and expected conversation identity, generation and revision; a save failure retains save-only retry. JSON clients remain supported and reject explicit incomplete finishes and oversize responses.
+3. Requirement status comes from the shared derivation. Completed and Under review take precedence. Otherwise expired work is Overdue; unsubmitted work due more than 24 hours away is Upcoming; drafts, requested changes, undated work and work due within 24 hours are Pending. These are display states, not new stored status values. Dashboard, tracker/submission card, requirement filter and AI context share the rule. Upcoming work remains eligible for next-action ranking.
+
+No schema migration is required. Existing transcripts and submission rows retain their formats. Persist only complete responses; a disconnected browser may not know whether a final save committed, so reload history before re-asking. Provider billing cancellation depends on provider support. Do not promise that streaming always begins within a fixed time: authentication, database context and provider latency still precede the first token.
+
+Remaining implementation/preparation scope: current milestone and personalized dashboard greeting; direct AI explanation of the selected dashboard action; minimal operational metadata; curated demo data and problem–solution script/screenshots/backup recording. Streaming and safety need a live model walkthrough; this branch does not claim measured KPI results.
+
+Verification on the implementation branch: full npm test and configured TypeScript/Vite production build passed. Additional browser-component regression verifies text appears while the completion frame is still pending, and incomplete output never offers a save retry. Review fixes reject incomplete/oversize JSON answers and refresh parent requirement filters after draft persistence. Independent review has no remaining major findings. No live migration or production deployment was performed.

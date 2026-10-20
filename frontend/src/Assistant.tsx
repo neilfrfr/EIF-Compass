@@ -14,6 +14,7 @@ export default function Assistant({client,userId,role,cohortId,onNavigate}:Props
  const [turns,setTurns]=useState<Turn[]>([]),[conversation,setConversation]=useState<Conversation|null>(null)
  const [input,setInput]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[paging,setPaging]=useState(false)
  const [error,setError]=useState(''),[loadError,setLoadError]=useState(false),[pending,setPending]=useState(''),[unsaved,setUnsaved]=useState<Unsaved|null>(null)
+ const [partial,setPartial]=useState<{requestId:string;question:string;answer:string}|null>(null),[incomplete,setIncomplete]=useState(false)
  const [hasMore,setHasMore]=useState(false),[before,setBefore]=useState<number|null>(null),[confirm,setConfirm]=useState(false)
  const controller=useRef<AbortController|null>(null),loadController=useRef<AbortController|null>(null),epoch=useRef(0),inFlight=useRef(false)
  const log=useRef<HTMLDivElement|null>(null),end=useRef<HTMLDivElement|null>(null)
@@ -29,14 +30,14 @@ export default function Assistant({client,userId,role,cohortId,onNavigate}:Props
    if(abort.signal.aborted||scope!==epoch.current)return
    setConversation(page.conversation);setHasMore(page.has_more);setBefore(page.next_before)
    setTurns(previous=>older?[...page.turns,...previous.filter(t=>!page.turns.some(p=>p.requestId===t.requestId))]:page.turns)
-   if(!older){setError('');setLoadError(false);if(page.turns.some(t=>t.requestId===unsavedRef.current?.requestId))setUnsaved(null)}
+   if(!older){setError('');setLoadError(false);if(page.turns.some(t=>t.requestId===unsavedRef.current?.requestId))setUnsaved(null);setPartial(previous=>previous&&page.turns.some(t=>t.requestId===previous.requestId)?null:previous)}
    if(older)requestAnimationFrame(()=>{if(log.current&&scope===epoch.current)log.current.scrollTop=oldTop+log.current.scrollHeight-oldHeight})
   }catch(e){if(!abort.signal.aborted&&scope===epoch.current){setError(e instanceof Error?e.message:'Could not load history.');if(!older)setLoadError(true)}}
   finally{if(!abort.signal.aborted&&scope===epoch.current){setLoading(false);setPaging(false)}}
  }
  useEffect(()=>{
   epoch.current++;controller.current?.abort();loadController.current?.abort();inFlight.current=false
-  setTurns([]);setConversation(null);setUnsaved(null);setInput('');setError('');setBusy(false);setPending('');setConfirm(false);setPaging(false)
+  setPartial(null);setIncomplete(false);setTurns([]);setConversation(null);setUnsaved(null);setInput('');setError('');setBusy(false);setPending('');setConfirm(false);setPaging(false)
   void load()
   const focus=()=>{if(!inFlight.current)void load()}
   window.addEventListener('focus',focus)
@@ -45,20 +46,20 @@ export default function Assistant({client,userId,role,cohortId,onNavigate}:Props
   // eslint-disable-next-line react-hooks/exhaustive-deps
  },[client,userId,role,cohortId])
  useEffect(()=>{if(!paging)end.current?.scrollIntoView?.({block:'nearest',behavior:'auto'})},[busy,unsaved])
- const blocked=busy||loading||loadError||paging||!conversation||!!unsaved
+ const blocked=busy||loading||loadError||paging||!conversation||!!unsaved||!!partial
  async function ask(question:string){
   if(inFlight.current||blocked||!question.trim()||!conversation)return
-  inFlight.current=true;setBusy(true);setError('');setPending(question)
+  inFlight.current=true;setBusy(true);setError('');setPending(question);setIncomplete(false);const requestId=crypto.randomUUID();setPartial({requestId,question,answer:''})
   const abort=new AbortController(),scope=epoch.current;controller.current=abort
   try{
-   const result=await historyRequest(client,'/api/assistant','POST',{message:question.trim(),conversationId:conversation.id,requestId:crypto.randomUUID(),generation:conversation.generation,revision:conversation.revision},abort.signal)
+   const result=await historyRequest(client,'/api/assistant','POST',{message:question.trim(),stream:true,conversationId:conversation.id,requestId,generation:conversation.generation,revision:conversation.revision},abort.signal,text=>{if(!abort.signal.aborted&&scope===epoch.current)setPartial(previous=>previous?{...previous,answer:(previous.answer+text).slice(0,16000)}:previous)})
    if(abort.signal.aborted||scope!==epoch.current)return
    if(typeof result.answer!=='string')throw new Error('The assistant returned an invalid response.')
    const turn:Unsaved={conversationId:conversation.id,requestId:result.requestId,question:question.trim(),answer:result.answer,generatedAt:result.generatedAt,truncated:result.truncated,sourceRefs:result.sourceRefs||[],sources:result.sources||[],generation:conversation.generation,revision:conversation.revision}
    if(result.historySaved){setTurns(previous=>[...previous,result.turn]);setConversation(result.conversation)}
    else{setUnsaved(turn);setError(result.saveError==='generation_conflict'?'This conversation was cleared elsewhere. This answer cannot be saved. Reload history.':'This answer has not been saved. Retry saving, or reload history if another tab changed it.')}
-   setInput('')
-  }catch(e){if(!abort.signal.aborted&&scope===epoch.current){setError((e instanceof Error?e.message:'Could not connect.')+' Reload history to check whether your answer was saved before asking again.');setInput(question);setLoadError(true)}}
+   setInput('');setPartial(null);setIncomplete(false)
+  }catch(e){if(scope===epoch.current){setIncomplete(true);setError((e instanceof Error?e.message:'Could not connect.')+' Reload history to check whether your answer was saved before asking again.');setInput(question);setLoadError(true)}}
   finally{if(scope===epoch.current&&controller.current===abort){inFlight.current=false;setBusy(false);setPending('')}}
  }
  async function retrySave(){
@@ -77,7 +78,7 @@ export default function Assistant({client,userId,role,cohortId,onNavigate}:Props
   try{
    const result=await historyRequest(client,'/api/assistant/history','DELETE',conversation,abort.signal)
    if(abort.signal.aborted||scope!==epoch.current)return
-   setConversation(result.conversation);setTurns([]);setUnsaved(null);setInput('');setError('');setHasMore(false);setBefore(null);setConfirm(false);setLoadError(false)
+   setConversation(result.conversation);setTurns([]);setUnsaved(null);setPartial(null);setIncomplete(false);setInput('');setError('');setHasMore(false);setBefore(null);setConfirm(false);setLoadError(false)
   }catch(e){if(!abort.signal.aborted&&scope===epoch.current)setError(e instanceof Error?e.message:'Could not clear history. Your conversation is kept.')}
   finally{if(scope===epoch.current){inFlight.current=false;setBusy(false)}}
  }
@@ -93,12 +94,13 @@ export default function Assistant({client,userId,role,cohortId,onNavigate}:Props
    {hasMore&&<button onClick={()=>void load(true)} disabled={paging||busy||loading}>{paging?'Loading earlier messages…':'Load earlier messages'}</button>}
    {!visible.length&&!busy&&!loading&&!loadError&&<div className="assistant-empty"><h3>{role==='lead'?'Start with a cohort briefing':'Start with your daily plan'}</h3><p>Select a prompt above or ask a question below. Responses use a fresh snapshot of the records you can access.</p></div>}
    {visible.map(t=><div key={t.requestId}><article className="assistant-message assistant-message-user"><h3>You</h3><div className="assistant-answer">{t.question}</div></article><article className="assistant-message assistant-message-assistant"><h3>EIF Compass</h3><div className="assistant-answer">{t.answer}</div>{t===unsaved&&<p className="assistant-warning">Not saved — keep this page open to retry.</p>}<p className="assistant-timestamp">Record snapshot checked {new Date(t.generatedAt).toLocaleString('en-PH',{timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'short'})} Philippine time. Saved answers may be outdated.</p>{t.truncated&&<p className="assistant-warning">This snapshot is limited. Counts are partial; check your work lists for the full picture.</p>}{!!t.sources?.length&&<details className="assistant-sources"><summary>Records available to this answer ({t.sources.length})</summary><p>Open the relevant work list to verify details.</p><div>{t.sources.map(s=><button className="text-button" key={`${s.view}:${s.id}`} onClick={()=>onNavigate(s.view)}>{s.title}</button>)}</div></details>}</article></div>)}
-   {busy&&pending&&<><article className="assistant-message assistant-message-user"><h3>You</h3><div className="assistant-answer">{pending}</div></article><p role="status">Checking your records and preparing a response…</p></>}
+   {partial&&<><article className="assistant-message assistant-message-user"><h3>You</h3><div className="assistant-answer">{partial.question}</div></article>{partial.answer&&<article className="assistant-message assistant-message-assistant"><h3>EIF Compass</h3><div className="assistant-answer">{partial.answer}</div></article>}<p role="status">{incomplete?'Incomplete answer — not saved.':partial.answer?'Receiving response…':'Checking your records and preparing a response…'}</p></>}
    <div ref={end}/>
   </div>
   {error&&<p className="auth-error" role="alert">{error}</p>}
+  {partial&&incomplete&&<button onClick={()=>{setPartial(null);setIncomplete(false)}} disabled={busy||loading}>Discard incomplete answer</button>}
   {loadError&&<button onClick={()=>void load()} disabled={busy||loading}>Retry loading history</button>}
   {unsaved&&<><button className="text-button" disabled={busy||loading} onClick={()=>{setUnsaved(null);setError('')}}>Discard unsaved answer</button><button onClick={()=>void retrySave()} disabled={busy||loading||loadError||(unsaved.generation!==conversation?.generation||unsaved.conversationId!==conversation?.id)}>Retry saving</button>{conversation&&(unsaved.generation!==conversation.generation||unsaved.conversationId!==conversation.id)&&<p role="alert">This answer belongs to a cleared conversation and cannot be saved. Discard the unsaved answer to continue.</p>}</>}
-  <form className="assistant-composer" onSubmit={submit} aria-busy={busy}><label htmlFor="assistant-question">Ask EIF Compass</label><textarea id="assistant-question" value={input} onChange={e=>setInput(e.target.value)} maxLength={2000} rows={3} disabled={blocked} placeholder={role==='lead'?'What needs my attention this week?':'What should I work on first?'} required/><div><span>{input.length}/2,000</span><button className="primary-button" type="submit" disabled={blocked||!input.trim()}>{busy?'Preparing…':'Ask assistant'}</button></div></form>
+  <form className="assistant-composer" onSubmit={submit} aria-busy={busy}><label htmlFor="assistant-question">Ask EIF Compass</label><textarea id="assistant-question" value={input} onChange={e=>setInput(e.target.value)} maxLength={2000} rows={3} disabled={blocked} placeholder={role==='lead'?'What needs my attention this week?':'What should I work on first?'} required/><div><span>{input.length}/2,000</span>{busy&&pending&&<button type="button" className="text-button" onClick={()=>controller.current?.abort()}>Stop response</button>}<button className="primary-button" type="submit" disabled={blocked||!input.trim()}>{busy?'Preparing…':'Ask assistant'}</button></div></form>
  </section>
 }
