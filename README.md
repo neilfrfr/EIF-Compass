@@ -45,7 +45,7 @@ This checklist follows the supplied PRD's P0 requirements. Implemented portions 
 - [x] **DASH-2 rule:** deterministic Next Best Action (overdue actionable task, nearest deadline, then blocked milestone), suggestion label, reason/due date. AI explanation remains unverified.
 - [x] **AI-1 implementation:** permitted feedback context, explicit no-grading/ranking/scoring/penalties/pass-fail policy, incremental streaming, and complete-only history persistence. Provider acceptance and KPI measurements remain separate.
 - [x] **REQ-1 display:** shared Upcoming/Pending/Under review/Completed/Overdue states across dashboard, tracker, filters and assistant context.
-- [ ] **Remaining implementation/preparation:** dashboard milestone/greeting, direct AI explanation of selected action, minimal operational metadata, curated demo story/data. See [PRD update](docs/prd-status-2026-10-20.md).
+- [ ] **Remaining implementation/preparation:** minimal operational metadata and curated demo data/recording. Dashboard greeting, team milestone and a grounded one-click suggestion explanation are implemented in the follow-up branch. See [PRD update](docs/prd-status-2026-10-20.md).
 - [ ] **Demo and QA:** realistic seeded cohort, deployed end-to-end role/persistence tests, 20-question AI test (at least 90% accuracy and zero evaluative outputs), 3–5 user usability test (at least 80% identify next priority within 30 seconds), dashboard load under 3 seconds, keyboard/mobile checks, two rehearsals and backup recording.
 
 ### Scope and checkpoints

@@ -22,13 +22,13 @@ const {Workspace}=await import('../.test-output/App.js')
 const root=createRoot(document.getElementById('root'))
 const session={user:{id:'test-user'}}
 await act(async()=>root.render(React.createElement(Workspace,{session})))
-assert.match(document.body.textContent,/Your fellowship journey/)
+assert.match(document.body.textContent,/Hello, EIF Fellow/)
 role='lead'
 await act(async()=>window.dispatchEvent(new window.Event('focus')))
 assert.match(document.body.textContent,/Cohort command center/,'Role must refresh from database on window focus')
 fail=true
 await act(async()=>window.dispatchEvent(new window.Event('focus')))
-assert.ok(!document.body.textContent.includes('Your fellowship journey'),'Profile failures must not fall back to intern')
+assert.ok(!document.body.textContent.includes('Hello, EIF Fellow'),'Profile failures must not fall back to intern')
 assert.match(document.body.textContent,/Profile unavailable/)
 await act(async()=>root.unmount())
 console.log('PASS: profile role refresh and no intern fallback on profile errors')

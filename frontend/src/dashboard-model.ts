@@ -6,11 +6,12 @@ export type SubmissionRow={requirement_id:string;user_id:string;status:string;su
 export type EventRow={id:string;title:string;starts_at:string;event_type?:string;location?:string}
 export type CohortRow={id:string;name:string;starts_on:string|null;ends_on:string|null}
 export type BlockerRow={id:string;reporter_id:string;project_id?:string|null;milestone_id?:string|null;status:string;description:string;created_at?:string}
-export type MilestoneRow={id:string;title:string;project_id:string;status:string;due_date?:string|null}
+export type MilestoneRow={id:string;title:string;project_id:string;sprint_id?:string;status:string;due_date?:string|null}
 export type ProjectRow={id:string;title:string;team_id:string}
+export type SprintRow={id:string;project_id:string;title:string;starts_on:string;ends_on:string}
 export type TeamRow={id:string;name:string}
 export type MembershipRow={team_id:string;user_id:string}
-export type DashboardData={cohort:CohortRow;profiles:ProfileRow[];tasks:TaskRow[];requirements:RequirementRow[];submissions:SubmissionRow[];events:EventRow[];blockers?:BlockerRow[];milestones?:MilestoneRow[];projects?:ProjectRow[];projectTeams?:TeamRow[];memberships?:MembershipRow[]}
+export type DashboardData={cohort:CohortRow;profiles:ProfileRow[];tasks:TaskRow[];requirements:RequirementRow[];submissions:SubmissionRow[];events:EventRow[];blockers?:BlockerRow[];milestones?:MilestoneRow[];projects?:ProjectRow[];projectTeams?:TeamRow[];memberships?:MembershipRow[];sprints?:SprintRow[]}
 export {manilaDay}
 export function requirementState(r:RequirementRow,userId:string,submissions:SubmissionRow[],now:Date|string){return sharedRequirementState(r,userId,submissions,typeof now==='string'&&now.length===10?`${now}T00:00:00+08:00`:now)}
 export function deriveDashboard(data:DashboardData,role:string,userId:string,now=new Date()){
@@ -41,9 +42,21 @@ export function deriveDashboard(data:DashboardData,role:string,userId:string,now
  const events=data.events.filter(e=>new Date(e.starts_at).getTime()>=now.getTime()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at))
  const blockers=(data.blockers||[]).filter(b=>role==='lead'||b.reporter_id===userId)
  const openBlockers=blockers.filter(b=>b.status==='open').sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')||a.id.localeCompare(b.id))
+ const ownTeamIds=new Set((data.memberships||[]).filter(m=>m.user_id===userId).map(m=>m.team_id))
+ const ownProjects=(data.projects||[]).filter(p=>ownTeamIds.has(p.team_id))
+ const ownProjectIds=new Set(ownProjects.map(p=>p.id))
+ const activeSprints=(data.sprints||[]).filter(s=>ownProjectIds.has(s.project_id)&&s.starts_on<=today&&s.ends_on>=today)
+ const unfinished=(data.milestones||[]).filter(m=>ownProjectIds.has(m.project_id)&&m.status!=='completed')
+ const active=unfinished.filter(m=>activeSprints.some(s=>s.id===m.sprint_id))
+ const candidates=active.length?active:unfinished.filter(m=>{const sprint=(data.sprints||[]).find(s=>s.id===m.sprint_id);return !sprint||sprint.ends_on>=today})
+ const currentMilestone=candidates.slice().sort((a,b)=>(a.status==='in_progress'?0:1)-(b.status==='in_progress'?0:1)||(a.due_date||'9999').localeCompare(b.due_date||'9999')||a.id.localeCompare(b.id))[0]||null
+ const milestoneSprint=(data.sprints||[]).find(s=>s.id===currentMilestone?.sprint_id)||null
+ const milestoneProject=ownProjects.find(p=>p.id===currentMilestone?.project_id)||null
+ const milestoneIsCurrent=!!currentMilestone&&active.some(m=>m.id===currentMilestone.id)
+ const greeting=data.profiles.find(p=>p.id===userId)?.display_name?.trim()||'EIF Fellow'
  const nextAction=rankActions({tasks:assignedTasks,requirements,submissions:data.submissions,blockers:openBlockers,milestones:data.milestones||[],role,userId},now)[0]||null
  const start=data.cohort.starts_on?Date.parse(data.cohort.starts_on):null,end=data.cohort.ends_on?Date.parse(data.cohort.ends_on):null
  const totalWeeks=start!==null&&end!==null?Math.max(1,Math.ceil((end-start+86400000)/604800000)):null
  const week=start!==null?Math.max(0,Math.floor((Date.parse(today)-start)/604800000)+1):null
- return {today,now,interns,tasks,assignedTasks,completedTasks,taskPercent,overdueTasks,requirements,requirementSlots,completedRequirements,overdueRequirements,reviewQueue,teams,people,events,blockers,openBlockers,nextAction,week:week!==null&&totalWeeks!==null?Math.min(week,totalWeeks):week,totalWeeks}
+ return {greeting,currentMilestone,milestoneSprint,milestoneProject,milestoneIsCurrent,today,now,interns,tasks,assignedTasks,completedTasks,taskPercent,overdueTasks,requirements,requirementSlots,completedRequirements,overdueRequirements,reviewQueue,teams,people,events,blockers,openBlockers,nextAction,week:week!==null&&totalWeeks!==null?Math.min(week,totalWeeks):week,totalWeeks}
 }

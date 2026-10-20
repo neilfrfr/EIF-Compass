@@ -11,7 +11,7 @@ const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'})
 Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true,requestAnimationFrame:fn=>fn()})
 const root=createRoot(document.getElementById('root')),requests=[],navigated=[]
 const client={auth:{getSession:async()=>({data:{session:{access_token:'verified-session'}},error:null})}}
-let conversation={id:'c',generation:0,revision:0},turns=[],failLoad=false,failSave=false,failClear=false,role='intern',deferred=null,pageDeferred=null,loadDeferred=null,hasMore=false,streamMode=null,finishStream=null
+let conversation={id:'c',generation:0,revision:0},turns=[],failLoad=false,failSave=false,failClear=false,role='intern',deferred=null,pageDeferred=null,loadDeferred=null,hasMore=false,streamMode=null,finishStream=null,initialExplanation=undefined
 const pair=b=>({requestId:b.requestId,question:b.message||b.question,answer:'<script>bad()</script> Prioritize reflection.',sources:[{id:'task',title:'Reflection',view:'work'}],sourceRefs:[],generatedAt:'2026-10-20T12:00:00Z',truncated:false})
 globalThis.fetch=async(url,options)=>{
  const body=options.body?JSON.parse(options.body):{};requests.push({url,method:options.method,body});assert.equal(options.headers.Authorization,'Bearer verified-session')
@@ -26,7 +26,7 @@ globalThis.fetch=async(url,options)=>{
  if(failSave&&url==='/api/assistant')return Response.json({...turn,historySaved:false,saveError:'history_unavailable'})
  conversation={...conversation,revision:conversation.revision+1};turns=[...turns,turn];if(url==='/api/assistant'&&streamMode==='ok')return new Response(JSON.stringify({type:'delta',text:'Streamed 🌱 answer'})+'\n'+JSON.stringify({type:'complete',result:{...turn,turn,conversation,historySaved:true}})+'\n',{headers:{'content-type':'application/x-ndjson'}});return Response.json({...turn,turn,conversation,historySaved:true})
 }
-const render=()=>act(async()=>root.render(React.createElement(Assistant,{client,userId:'user-'+role,role,cohortId:'cohort',onNavigate:v=>navigated.push(v)})))
+const render=()=>act(async()=>root.render(React.createElement(Assistant,{client,userId:'user-'+role,role,cohortId:'cohort',initialExplanation,onNavigate:v=>navigated.push(v)})))
 const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent===text)
 const click=text=>act(async()=>{assert.ok(button(text),`Missing ${text}`);button(text).click()})
 await render();assert.match(document.body.textContent,/Plan my day/)
@@ -68,5 +68,6 @@ await click('Retry loading history');assert.ok(button('Plan my day').disabled);a
 let resolve;deferred=new Promise(r=>resolve=r);await click('Plan my day');role='lead';turns=[];conversation={id:'lead',generation:0,revision:0};await render()
 await act(async()=>resolve(Response.json({...pair({requestId:'late',message:'old private question'}),answer:'old private answer',historySaved:true,turn:pair({requestId:'late',message:'old private question'}),conversation})))
 assert.ok(!document.body.textContent.includes('old private'));assert.match(document.body.textContent,/Brief my cohort/)
+await act(async()=>root.render(null));initialExplanation={question:'Explain selected action',id:'expected',view:'work'};const previousCalls=requests.filter(r=>r.url==='/api/assistant').length;await render();assert.equal(requests.filter(r=>r.url==='/api/assistant').length,previousCalls+1);assert.equal(requests.filter(r=>r.url==='/api/assistant').at(-1).body.expectedAction.id,'expected');await click('Reload history');assert.equal(requests.filter(r=>r.url==='/api/assistant').length,previousCalls+1,'History reload must not repeat explanation')
 await act(async()=>root.unmount())
 console.log('PASS: restoration, safe text, source navigation, clear confirmation/failure, save-only retry, reload guards and account race isolation')

@@ -46,3 +46,19 @@ async function loadContext({request,user,profile,now}){
  return {today,timeZone:'Asia/Manila',role:profile.role,cohort:cohorts[0]?{...cohorts[0],name:clip(cohorts[0].name,100)}:null,members,tasks,requirements,submissions:visibleSubmissions,events,feedback,teams,memberships,projects,sprints,milestones,blockers,summary,requirementStatuses:slots.map(({r,id})=>({requirementId:r.id,userId:id,status:requirementState(r,id,visibleSubmissions,now)})),priorities:priorities.slice(0,8),truncated,sources};
 }
 module.exports={loadContext};
+
+// A bounded snapshot may omit the selected dashboard action. Resolve that one
+// record under the same JWT and validate actionability without claiming a full ranking.
+async function loadSelectedAction({request,user,profile,target,now}){
+ const {rankActions}=await import('../../shared/workflow-rules.mjs');
+ const table={work:'tasks',requirements:'requirements',blockers:'blockers'}[target.view];
+ const rows=await request(`/rest/v1/${table}?select=*&id=eq.${encodeURIComponent(target.id)}&cohort_id=eq.${encodeURIComponent(profile.cohort_id)}&limit=1`);
+ const row=rows[0];if(!row)return null;
+ let tasks=[],requirements=[],submissions=[],blockers=[],milestones=[];
+ if(target.view==='work')tasks=[row];
+ if(target.view==='requirements'){requirements=[row];submissions=await request(`/rest/v1/requirement_submissions?select=requirement_id,user_id,status&requirement_id=eq.${encodeURIComponent(row.id)}&user_id=eq.${encodeURIComponent(user.id)}&limit=1`)}
+ if(target.view==='blockers'){blockers=[row];if(row.milestone_id)milestones=await request(`/rest/v1/milestones?select=id,title,status,due_date&id=eq.${encodeURIComponent(row.milestone_id)}&cohort_id=eq.${encodeURIComponent(profile.cohort_id)}&limit=1`)}
+ const action=rankActions({tasks,requirements,submissions,blockers,milestones,role:profile.role,userId:user.id},now)[0];
+ return action?{...action,title:clip(action.title,180),reason:clip(action.reason,500)}:null;
+}
+module.exports.loadSelectedAction=loadSelectedAction;
