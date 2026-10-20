@@ -13,6 +13,9 @@
     },
     "api/submissions/remove.js": {
       "maxDuration": 300
+    },
+    "api/assistant/history.js": {
+      "maxDuration": 60
     }
   }
 }

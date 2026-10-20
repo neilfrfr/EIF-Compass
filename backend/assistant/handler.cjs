@@ -1,3 +1,5 @@
+const {authenticate,problem}=require('./auth.cjs');
+const {uuid,version,store,refs,present}=require('./history-store.cjs');
 const {loadContext}=require('./context.cjs');
 const {systemPrompt}=require('./prompts.cjs');
 function createHandler({env=process.env,fetchImpl=fetch,now=()=>new Date()}={}){
@@ -12,23 +14,22 @@ function createHandler({env=process.env,fetchImpl=fetch,now=()=>new Date()}={}){
   if(!token)return fail(401,'Sign in to use the assistant.');
   let body=req.body;
   try{if(typeof body==='string')body=JSON.parse(body);}catch{return fail(400,'Invalid request.');}
-  const history=body?.history??[];
-  if(!body||typeof body.message!=='string'||!body.message.trim()||body.message.length>2000||!Array.isArray(history)||history.length>6||history.some(m=>!m||!['user','assistant'].includes(m.role)||typeof m.content!=='string'||m.content.length>1000)||Buffer.byteLength(JSON.stringify(body))>12000)return fail(400,'Enter a message under 2,000 characters with a short conversation history.');
-  const url=(env.SUPABASE_URL||env.VITE_SUPABASE_URL||'').replace(/\/$/,'');
-  const key=env.SUPABASE_PUBLISHABLE_KEY||env.VITE_SUPABASE_PUBLISHABLE_KEY||env.VITE_SUPABASE_ANON_KEY;
-  if(!url||!key||!env.OPENROUTER_API_KEY||!env.OPENROUTER_MODEL)return fail(503,'The assistant is not configured yet. Ask your lead to configure OpenRouter and Supabase on the server.');
+  if(!body||typeof body.message!=='string'||!body.message.trim()||body.message.length>2000||Buffer.byteLength(JSON.stringify(body))>12000)return fail(400,'Enter a message under 2,000 characters.');
   let userId;
   try{
-   const request=async(path)=>{
-    const response=await fetchImpl(url+path,{headers:{apikey:key,Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(8000)});
-    if(!response.ok){const e=new Error('Database request failed');e.status=path.startsWith('/auth/')?401:502;throw e;}
-    return response.json();
-   };
-   const user=await request('/auth/v1/user');
-   if(!user?.id)return fail(401,'Your session expired. Sign in again.');
-   const profiles=await request(`/rest/v1/profiles?select=id,role,cohort_id,display_name&id=eq.${encodeURIComponent(user.id)}&limit=1`);
-   const profile=profiles[0];
-   if(!profile||!['intern','lead'].includes(profile.role)||!profile.cohort_id)return fail(403,'Your account needs a valid fellowship role and cohort.');
+   const {request,user,profile}=await authenticate(req,{env,fetchImpl});
+   version(body);if(!uuid.test(body.requestId))throw problem(400,'Invalid request identifier.');
+   const db=store(request),page=await db.load(null,body.generation);
+   if(body.conversationId!==page.conversation.id)throw problem(409,'Your conversation scope changed. Reload history.','generation_conflict');
+   const existing=await db.find(body.requestId,body.generation);
+   if(existing){
+    if(existing.turn.user_content!==body.message.trim())throw problem(400,'Request ID has different content.');
+    const turn=(await present(request,[existing.turn]))[0];
+    return res.status(200).json({...turn,role:profile.role,conversation:existing.conversation,turn,historySaved:true,draftOnly:true});
+   }
+   if(page.conversation.revision!==body.revision)throw problem(409,'The conversation changed. Reload history before retrying.','revision_conflict');
+   if(!env.OPENROUTER_API_KEY||!env.OPENROUTER_MODEL)throw problem(503,'The assistant is not configured yet. Ask your lead to configure OpenRouter on the server.');
+   const history=page.turns.slice(-3).flatMap(t=>[{role:'user',content:t.user_content.slice(0,1000)},{role:'assistant',content:t.assistant_content.slice(0,1000)}]);
    const clock=now().getTime();
    for(const [id,entry] of windows)if(entry.until<=clock)windows.delete(id);
    const entry=windows.get(user.id)||{until:clock+60000,count:0};
@@ -46,8 +47,13 @@ function createHandler({env=process.env,fetchImpl=fetch,now=()=>new Date()}={}){
     if(choice?.finish_reason==='content_filter')return fail(502,'The model blocked this response. Try rephrasing your question.');
     return fail(502,'The model returned no answer text. Retry once, or select another model in OpenRouter.');
    }
-   return res.status(200).json({answer:answer.slice(0,16000),role:profile.role,summary:context.summary,sources:context.sources,truncated:context.truncated,generatedAt:now().toISOString(),draftOnly:true});
-  }catch(error){return fail(error.status||502,error.status===401?'Your session expired. Sign in again.':'Could not load the assistant. Check your connection and try again.');}
+   const pair={conversationId:page.conversation.id,requestId:body.requestId,generation:body.generation,revision:body.revision,question:body.message.trim(),answer:answer.slice(0,16000),generatedAt:now().toISOString(),truncated:context.truncated,sourceRefs:refs(context.sources)};
+   const output={...pair,role:profile.role,summary:context.summary,sources:context.sources,draftOnly:true};
+   try{
+    const saved=await db.append(pair);
+    return res.status(200).json({...output,conversation:saved.conversation,turn:{...pair,sequence:saved.turn.sequence,sources:context.sources},historySaved:true});
+   }catch(e){return res.status(200).json({...output,historySaved:false,saveError:e.code||'history_unavailable'});}
+  }catch(error){return res.status(error.status||502).json({error:error.status?error.message:'Could not load the assistant. Check your connection and try again.',code:error.code});}
   finally{if(userId)active.delete(userId);}
  };
 }

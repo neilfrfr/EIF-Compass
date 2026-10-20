@@ -3,12 +3,13 @@ const {createHandler}=require('../assistant/handler.cjs');
 async function run(provider){
  let sent;
  const handler=createHandler({env:{SUPABASE_URL:'https://db.example',SUPABASE_PUBLISHABLE_KEY:'public',OPENROUTER_API_KEY:'fixture',OPENROUTER_MODEL:'openrouter/free'},fetchImpl:async(url,options)=>{
+  if(String(url).includes('/rpc/')){const name=String(url).split('/').pop();if(name==='eif_assistant_load')return Response.json({conversation:{id:'cccccccc-0000-4000-8000-000000000001',conversationId:'cccccccc-0000-4000-8000-000000000001',generation:0,revision:0},turns:[]});if(name==='eif_assistant_find')return Response.json(null);if(name==='eif_assistant_append')return Response.json({conversation:{id:'cccccccc-0000-4000-8000-000000000001',generation:0,revision:1},turn:{sequence:1}});}
   if(url.includes('openrouter.ai')){sent=JSON.parse(options.body);return new Response(JSON.stringify(provider));}
-  let data=[];if(url.includes('/auth/'))data={id:'u'};else if(url.includes('/profiles?')&&url.includes('id=eq.'))data=[{id:'u',role:'lead',cohort_id:'c'}];
+  let data=[];if(url.includes('/auth/'))data={id:'u'};else if(url.includes('/profiles?')&&url.includes('id=eq.'))data=[{id:'u',role:'lead',cohort_id:'cccccccc-0000-4000-8000-000000000001'}];
   return new Response(JSON.stringify(data));
  }});
  const res={statusCode:200,setHeader(){},status(c){this.statusCode=c;return this},json(v){this.body=v}};
- await handler({method:'POST',headers:{authorization:'Bearer session'},body:{message:'Brief my cohort'}},res);
+ await handler({method:'POST',headers:{authorization:'Bearer session'},body:{message:'Brief my cohort',requestId:'11111111-1111-4111-8111-111111111111',conversationId:'cccccccc-0000-4000-8000-000000000001',generation:0,revision:0}},res);
  return {res,sent};
 }
 (async()=>{
