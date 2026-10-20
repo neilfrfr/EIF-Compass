@@ -4,7 +4,7 @@ import {deriveDashboard,requirementState} from './dashboard-model'
 import type {DashboardData} from './dashboard-model'
 import type {Role,View} from './data'
 type Props={client:SupabaseClient;role:Role;userId:string;cohortId:string;revision:number;onNavigate:(view:View)=>void}
-const statusLabel:Record<string,string>={completed:'Completed',in_review:'In review',pending:'Pending',overdue:'Overdue',to_do:'To do',in_progress:'In progress',for_review:'For review'}
+const statusLabel:Record<string,string>={completed:'Completed',in_review:'Under review',upcoming:'Upcoming',pending:'Pending',overdue:'Overdue',to_do:'To do',in_progress:'In progress',for_review:'For review'}
 function day(value?:string|null){return value?new Date(`${value}T12:00:00+08:00`).toLocaleDateString('en-PH',{timeZone:'Asia/Manila',month:'short',day:'numeric'}):'No deadline'}
 export default function Dashboard({client,role,userId,cohortId,revision,onNavigate}:Props){
  const [data,setData]=useState<DashboardData|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[selected,setSelected]=useState<string|null>(null),[selectedTeam,setSelectedTeam]=useState<string|null>(null)

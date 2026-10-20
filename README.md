@@ -14,7 +14,7 @@ EIF Compass gives Eskwelabs Innovation Fellowship interns one workspace for task
 
 The current backend uses Supabase for database authorization and a Vercel serverless endpoint for the OpenRouter assistant. There is no separate FastAPI/Render service. See [frontend setup](frontend/README.md) and [backend setup](backend/README.md).
 
-## Implementation status — October 14, 2026
+## Implementation status — October 20, 2026
 
 Check-in 1 foundation: October 7. The foundation and October 14 non-AI P0 workflows are implemented. A local browser lead/intern walkthrough passed; the deployed walkthrough and realistic demo dataset still need verification. This is not yet the complete Demo Day MVP.
 
@@ -26,7 +26,7 @@ Check-in 1 foundation: October 7. The foundation and October 14 non-AI P0 workfl
 | Task management | Lead create/edit/remove with project, sprint and milestone links; intern assigned-task status; combined search, deadline, sprint, priority and status filters |
 | Requirements | Links, notes, private attachments, drafts, unsubmit/resubmit, deadline locks and lead review implemented on the feature branch; live Storage verification pending |
 | Calendar | Cohort event management and chronological event/requirement agenda; Google selected-event sync remains unverified against live OAuth |
-| Assistant | Server-side OpenRouter with verified sessions and permission-filtered feedback context; real-provider accuracy/safety test and streaming pending |
+| Assistant | Server-side OpenRouter with verified sessions and permission-filtered feedback context; private saved history, explicit no-evaluation rules and incremental streaming implemented; real-provider acceptance remains pending |
 | Projects, feedback, blockers, notifications | Project progress, lead feedback, blocker discussion/resolution, and task, feedback, due-soon, overdue notices with read state implemented |
 | Demo data | Base seed contains a cohort and sample requirements/events; the planned ~20 interns, 5 teams, and 2 sprints need preparation |
 | Validation | Component/API and migrated database tests, production build, and local browser lead/intern walkthrough passed; deployed browser walkthrough remains pending |
@@ -43,7 +43,9 @@ This checklist follows the supplied PRD's P0 requirements. Implemented portions 
 - [x] **BLK-1 / LEAD-1:** intern blocker reports with category/description, lead comments/resolution, and lead blocker list.
 - [x] **NOTIF-1:** in-app notices for deadlines, overdue work, new feedback, and task assignment, with mark-as-read.
 - [x] **DASH-2 rule:** deterministic Next Best Action (overdue actionable task, nearest deadline, then blocked milestone), suggestion label, reason/due date. AI explanation remains unverified.
-- [ ] **AI-1:** include permitted feedback once available; explicitly prohibit grading, ranking/scoring/penalizing interns and pass/fail decisions; verify refusals and grounding; add streaming to meet the PRD's response requirement.
+- [x] **AI-1 implementation:** permitted feedback context, explicit no-grading/ranking/scoring/penalties/pass-fail policy, incremental streaming, and complete-only history persistence. Provider acceptance and KPI measurements remain separate.
+- [x] **REQ-1 display:** shared Upcoming/Pending/Under review/Completed/Overdue states across dashboard, tracker, filters and assistant context.
+- [ ] **Remaining implementation/preparation:** dashboard milestone/greeting, direct AI explanation of selected action, minimal operational metadata, curated demo story/data. See [PRD update](docs/prd-status-2026-10-20.md).
 - [ ] **Demo and QA:** realistic seeded cohort, deployed end-to-end role/persistence tests, 20-question AI test (at least 90% accuracy and zero evaluative outputs), 3–5 user usability test (at least 80% identify next priority within 30 seconds), dashboard load under 3 seconds, keyboard/mobile checks, two rehearsals and backup recording.
 
 ### Scope and checkpoints
