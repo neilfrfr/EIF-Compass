@@ -1,0 +1,59 @@
+/* Deep Lagoon design tokens. The only stylesheet (with compass-mark.svg and inline logo SVG) allowed to hold raw colours. */
+@font-face{font-family:"Inter";src:url("/fonts/InterVariable.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+
+:root{
+  --ease-out:cubic-bezier(.23,1,.32,1);
+  --ease-in-out:cubic-bezier(.77,0,.175,1);
+  --r-btn:7px;--r-card:12px;--r-badge:5px;
+  --font-sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:ui-monospace,"Cascadia Code",Consolas,monospace;
+}
+
+:root,html[data-theme=light]{
+  --canvas:#eef5f2;--surface:#fff;--surface2:#e6f0ec;--line:#d5e3df;
+  --ink:#203f43;--strong:#12333a;--muted:#526d70;
+  --accent:#176f70;--accent-h:#105b5e;--onaccent:#fff;--accenttext:#176f70;
+  --chip:#deeee7;--glow:#2a9d9633;--nbabg:#e3f1eb;--nbaline:#bcd9ce;
+  --side:#245862;--sideink:#fff;--sidemuted:#c1dbd6;--sel:#deeee7;--selink:#174f56;--sidehover:#ffffff12;
+  --hover:#f2f8f5;
+  --red:#a23a2a;--redbg:#fbeae5;--amber:#8a4d16;--amberbg:#faf0dc;--fielderr:#c0533f;
+  --shadow:0 1px 2px #14353a0f;--shadow-pop:0 12px 32px #14353a26;
+  --field:#fff;--fieldline:#c2d6d0;
+  --story:#245862;--storyink:#f4faf7;--storymuted:#c1dbd6;--path:#7aaba4;
+  --scrim:#14353a66;
+  color-scheme:light;
+}
+html[data-theme=dark]{
+  --canvas:#081b1d;--surface:#0d2528;--surface2:#112d31;--line:#1a3a3e;
+  --ink:#cfe3de;--strong:#effaf6;--muted:#8db0aa;
+  --accent:#deeee7;--accent-h:#fff;--onaccent:#14353a;--accenttext:#a8dccb;
+  --chip:#143b3a;--glow:#3fb8a92e;--nbabg:#0f2f30;--nbaline:#245862;
+  --side:#061416;--sideink:#effaf6;--sidemuted:#8db0aa;--sel:#143b3a;--selink:#deeee7;--sidehover:#ffffff12;
+  --hover:#11302f;
+  --red:#ff9180;--redbg:#3a1611;--amber:#f2b46a;--amberbg:#33230f;--fielderr:#c0533f;
+  --shadow:0 1px 2px #0006;--shadow-pop:0 12px 32px #0009;
+  --field:#0b2124;--fieldline:#21464a;
+  --story:#061416;--storyink:#effaf6;--storymuted:#8db0aa;--path:#3f8c85;
+  --scrim:#00000099;
+  color-scheme:dark;
+}
+
+/* Theme switch reveal: circular clip-path from the toggle. Theme changes only. */
+.vt-theme::view-transition-old(root),.vt-theme::view-transition-new(root){animation:none;mix-blend-mode:normal}
+.vt-theme::view-transition-new(root){clip-path:circle(0 at var(--tx) var(--ty));animation:theme-reveal .7s var(--ease-in-out) forwards}
+@keyframes theme-reveal{to{clip-path:circle(var(--tr) at var(--tx) var(--ty))}}
+
+/* Theme toggle pill */
+.theme-toggle{position:relative;display:flex;padding:3px;border:0;border-radius:99px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;font:inherit}
+.theme-icon{position:relative;z-index:1;width:28px;height:24px;display:grid;place-items:center;color:var(--muted);transition:color .3s}
+.theme-thumb{position:absolute;top:3px;left:3px;width:28px;height:24px;border-radius:99px;background:var(--surface);box-shadow:0 1px 3px #0002,0 0 0 1px var(--line);transition:transform .45s var(--ease-out)}
+.theme-toggle[aria-pressed=true] .theme-thumb{transform:translateX(28px)}
+.theme-toggle[aria-pressed=false] .theme-sun,.theme-toggle[aria-pressed=true] .theme-moon{color:var(--strong)}
+.theme-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (pointer:coarse){.theme-toggle::after{content:"";position:absolute;inset:-8px -4px}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01ms!important;transition-delay:0s!important;scroll-behavior:auto!important}
+  .vt-theme::view-transition-new(root){animation:none;clip-path:none}
+}
+@media (forced-colors:active){.theme-toggle{border:1px solid ButtonText}.theme-toggle[aria-pressed=true] .theme-thumb{border:1px solid Highlight}}

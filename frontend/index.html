@@ -6,7 +6,12 @@
     <meta name="theme-color" content="#245862" />
     <meta name="description" content="EIF Compass — your fellowship progress, all in one place." />
     <title>EIF Compass</title>
-    <link rel="preload" href="/fonts/manrope-variable.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      (function(){var t,d=document.documentElement;try{t=localStorage.getItem('eif-theme')}catch(e){}
+      if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'
+      d.dataset.theme=t;d.style.colorScheme=t;if(t==='dark')document.querySelector('meta[name=theme-color]').content='#061416'})()
+    </script>
     <link rel="icon" type="image/svg+xml" href="/compass-mark.svg" />
   </head>
   <body>
