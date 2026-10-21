@@ -21,6 +21,9 @@
   --field:#fff;--fieldline:#c2d6d0;
   --story:#245862;--storyink:#f4faf7;--storymuted:#c1dbd6;--path:#7aaba4;
   --scrim:#14353a66;
+  --sideline:#ffffff1a;--thumb-shadow:0 1px 3px #0002;--btn-hi:inset 0 1px 0 #ffffff26;--btn-edge:#000;
+  --progress-fill:#176f70;
+  --storygrid:#ffffff08;--storyglow:#3fb8a944;--storyaccent:#a9d4c5;--node:#b1d0c9;--node-end:#deeee7;
   color-scheme:light;
 }
 html[data-theme=dark]{
@@ -35,6 +38,7 @@ html[data-theme=dark]{
   --field:#0b2124;--fieldline:#21464a;
   --story:#061416;--storyink:#effaf6;--storymuted:#8db0aa;--path:#3f8c85;
   --scrim:#00000099;
+  --progress-fill:linear-gradient(90deg,#3fb8a9,#deeee7);--storyaccent:#a8dccb;
   color-scheme:dark;
 }
 
@@ -43,17 +47,7 @@ html[data-theme=dark]{
 .vt-theme::view-transition-new(root){clip-path:circle(0 at var(--tx) var(--ty));animation:theme-reveal .7s var(--ease-in-out) forwards}
 @keyframes theme-reveal{to{clip-path:circle(var(--tr) at var(--tx) var(--ty))}}
 
-/* Theme toggle pill */
-.theme-toggle{position:relative;display:flex;padding:3px;border:0;border-radius:99px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;font:inherit}
-.theme-icon{position:relative;z-index:1;width:28px;height:24px;display:grid;place-items:center;color:var(--muted);transition:color .3s}
-.theme-thumb{position:absolute;top:3px;left:3px;width:28px;height:24px;border-radius:99px;background:var(--surface);box-shadow:0 1px 3px #0002,0 0 0 1px var(--line);transition:transform .45s var(--ease-out)}
-.theme-toggle[aria-pressed=true] .theme-thumb{transform:translateX(28px)}
-.theme-toggle[aria-pressed=false] .theme-sun,.theme-toggle[aria-pressed=true] .theme-moon{color:var(--strong)}
-.theme-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media (pointer:coarse){.theme-toggle::after{content:"";position:absolute;inset:-8px -4px}}
-
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01ms!important;transition-delay:0s!important;scroll-behavior:auto!important}
   .vt-theme::view-transition-new(root){animation:none;clip-path:none}
 }
-@media (forced-colors:active){.theme-toggle{border:1px solid ButtonText}.theme-toggle[aria-pressed=true] .theme-thumb{border:1px solid Highlight}}

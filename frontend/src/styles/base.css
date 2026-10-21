@@ -1,0 +1,291 @@
+/* Deep Lagoon base: reset, typography, shared controls and primitives. Colours come from tokens.css only. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--canvas);
+  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-feature-settings: "cv01", "ss03", "zero";
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: -0.011em;
+  color: var(--ink);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--strong);
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+
+p {
+  line-height: 1.65;
+}
+
+a {
+  color: var(--accenttext);
+  text-underline-offset: 4px;
+}
+
+svg {
+  flex-shrink: 0;
+}
+
+kbd,
+code {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: var(--chip);
+  color: var(--strong);
+}
+
+/* Controls */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  min-height: 40px;
+  cursor: pointer;
+  text-wrap: pretty;
+  transition: background-color 0.2s var(--ease-out), color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), transform 0.16s var(--ease-out);
+}
+
+button:active:not(:disabled):not(:focus-visible) {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+input,
+textarea {
+  caret-color: var(--accent);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+}
+
+/* Focus rings */
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 0 4px var(--glow);
+}
+
+/* Buttons */
+.primary-button,
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  height: auto;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--r-btn);
+  background: var(--accent);
+  color: var(--onaccent);
+  font-size: 13px;
+  font-weight: 510;
+  line-height: 1.3;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 70%, var(--btn-edge)), 0 6px 20px var(--glow), var(--btn-hi);
+}
+
+.primary-button svg,
+.btn-primary svg {
+  transition: transform 0.25s var(--ease-out);
+}
+
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accenttext);
+  font-size: 13px;
+  font-weight: 510;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .primary-button:hover:not(:disabled),
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-h);
+  }
+
+  .primary-button:hover:not(:disabled) svg,
+  .btn-primary:hover:not(:disabled) svg {
+    transform: translateX(3px);
+  }
+
+  .text-button:hover:not(:disabled) {
+    background: var(--chip);
+  }
+}
+
+/* Panels and cards */
+.panel,
+.dashboard-panel,
+.card {
+  min-width: 0;
+  padding: 20px 22px;
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.panel button:not([class]) {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--r-btn);
+  background: var(--surface);
+  color: var(--accenttext);
+  font-size: 12px;
+  font-weight: 510;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* Alerts */
+.auth-error {
+  overflow-wrap: anywhere;
+  padding: 10px 12px;
+  border-radius: var(--r-btn);
+  background: var(--redbg);
+  color: var(--red);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* Status badges: always icon + text, colour is only a hint */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: var(--r-badge);
+  background: var(--chip);
+  color: var(--accenttext);
+  font-size: 11px;
+  font-weight: 510;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.status-badge svg {
+  width: 11px;
+  height: 11px;
+}
+
+.status-badge.is-overdue {
+  background: var(--redbg);
+  color: var(--red);
+}
+
+.status-badge.is-pending {
+  background: var(--amberbg);
+  color: var(--amber);
+}
+
+.status-badge.is-upcoming,
+.status-badge.is-completed,
+.status-badge.is-progress {
+  background: var(--chip);
+  color: var(--accenttext);
+}
+
+.status-badge.is-review {
+  background: var(--surface2);
+  color: var(--strong);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.status-badge.is-todo {
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+@media (max-width: 767px) {
+  button {
+    min-height: 44px;
+  }
+
+  .primary-button,
+  .btn-primary,
+  .text-button {
+    min-height: 44px;
+  }
+
+  .panel,
+  .dashboard-panel,
+  .card {
+    padding: 16px;
+  }
+}
+
+@media (forced-colors: active) {
+  .panel,
+  .dashboard-panel,
+  .card,
+  .primary-button,
+  .btn-primary,
+  .status-badge {
+    border: 1px solid CanvasText;
+  }
+}
