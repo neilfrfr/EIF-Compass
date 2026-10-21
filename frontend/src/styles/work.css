@@ -245,7 +245,7 @@
   margin: 0 -10px;
   padding: 12px 10px;
   border-top: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--r-btn);
 }
 
 .manager-list > .work-row:first-child {
@@ -287,7 +287,7 @@
   margin-left: -6px;
   padding: 3px 6px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--r-btn);
   background: transparent;
   color: var(--strong);
   font-size: 14px;
@@ -338,7 +338,7 @@
 .drawer-discard {
   margin: 4px 0;
   padding: 14px 16px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: var(--redbg);
   color: var(--ink);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--red) 28%, transparent);
@@ -710,6 +710,16 @@
     margin: 12px 16px 0;
   }
 
+  .submission-fields input[type=file]::file-selector-button {
+    min-height: 44px;
+  }
+}
+
+/* Touch targets: beat base.css's 34px `.panel button:not([class])` and the 38px fieldset buttons */
+@media (max-width: 767px), (pointer: coarse) {
+  .panel button:not([class]),
+  .record-form fieldset > button,
+  .record-open,
   .submission-fields input[type=file]::file-selector-button {
     min-height: 44px;
   }

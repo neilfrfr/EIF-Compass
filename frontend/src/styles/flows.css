@@ -24,7 +24,7 @@
   flex-wrap: wrap;
   gap: 2px;
   padding: 3px;
-  border-radius: 9px;
+  border-radius: var(--r-btn);
   background: var(--surface2);
   box-shadow: inset 0 0 0 1px var(--line);
 }
@@ -33,7 +33,7 @@
   min-height: 32px;
   padding: 5px 14px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--r-badge);
   background: transparent;
   color: var(--muted);
   font-size: 13px;
@@ -52,7 +52,7 @@
   margin: 0 -12px;
   padding: 16px 12px;
   border-top: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--r-btn);
   min-width: 0;
 }
 
@@ -205,7 +205,7 @@
   min-height: 36px;
   padding: 4px 8px;
   margin-left: -8px;
-  border-radius: 6px;
+  border-radius: var(--r-btn);
   color: var(--accenttext);
   font-size: 13px;
   font-weight: 510;
@@ -215,7 +215,7 @@
 .intern-flows .flow-comment {
   margin: 8px 0;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--r-card);
   background: var(--surface2);
   color: var(--ink);
   white-space: pre-wrap;
@@ -305,6 +305,14 @@
 
   .flow-row {
     align-items: flex-start;
+  }
+}
+
+@media (pointer: coarse) {
+  .panel .flow-tabs button,
+  .blocker-discussion summary,
+  .team-management summary {
+    min-height: 44px;
   }
 }
 

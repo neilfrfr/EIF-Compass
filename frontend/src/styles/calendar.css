@@ -45,7 +45,7 @@
   margin: 0 -10px;
   padding: 12px 10px;
   border-top: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--r-btn);
 }
 
 .agenda-list time {
@@ -145,7 +145,7 @@
   margin: 0 -10px;
   padding: 10px;
   border-top: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--r-btn);
   font-size: 13px;
   cursor: pointer;
 }
@@ -162,7 +162,7 @@
   height: 18px;
   margin: 2px 0 0;
   border: 1px solid var(--fieldline);
-  border-radius: 5px;
+  border-radius: var(--r-badge);
   background: var(--field);
   cursor: pointer;
   appearance: none;
@@ -294,6 +294,12 @@
   .calendar-selection input:checked {
     border-color: Highlight;
     background: Highlight;
+  }
+}
+
+@media (pointer: coarse) {
+  .calendar-selection label {
+    min-height: 44px;
   }
 }
 
