@@ -8,3 +8,5 @@ dist/
 .DS_Store
 
 .test-output/
+.superpowers/
+.playwright-mcp/
