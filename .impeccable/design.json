@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T04:01:36.361392+08:00",
+  "title": "Design System: EIF Compass \u2014 Fellowship Studio",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Compass Teal"
+      },
+      "forest": {
+        "role": "primary",
+        "displayName": "Reference Teal"
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Warm Canvas"
+      }
+    },
+    "shadows": [
+      {
+        "name": "drawer",
+        "value": "-10px 0 40px #173f441f",
+        "purpose": "Separate focused record details from background context."
+      },
+      {
+        "name": "surface",
+        "value": "0 6px 22px #24586214, 0 2px 6px #2458620a",
+        "purpose": "Low ambient depth for working panels."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(.23,1,.32,1)",
+        "purpose": "Short pointer transitions; movement disabled for keyboard entry and reduced motion."
+      },
+      {
+        "name": "ease-buoyant",
+        "value": "cubic-bezier(.22,1.35,.36,1)",
+        "purpose": "Gentle hover and occasional overlay feedback; no repeating motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "desktop-navigation",
+        "value": "1200px"
+      },
+      {
+        "name": "phone",
+        "value": "768px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "One clear primary action in a working section.",
+      "html": "<button class=\"ds-primary\">Save changes</button>",
+      "css": ".ds-primary{font:650 12px Manrope,system-ui,sans-serif;background:var(--brand,#176f70);color:#fff;padding:10px 16px;min-height:42px;border:1px solid transparent;border-radius:8px}.ds-primary:hover{background:#105b5e}.ds-primary:focus-visible{outline:3px solid #137779;outline-offset:3px}.ds-primary:disabled{opacity:.55;cursor:not-allowed}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Fellowship Studio",
+    "overview": "A professional fellowship workspace that makes next actions clear and shared progress visible.",
+    "keyCharacteristics": [
+      "Teal navigation",
+      "Warm working surfaces",
+      "Meaningful density",
+      "Record-specific actions"
+    ],
+    "rules": [
+      {
+        "name": "Meaning before decoration",
+        "body": "Show recorded deadlines, progress, and useful actions.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Keep navigation labels visible.",
+      "Preserve draft and submission distinctions."
+    ],
+    "donts": [
+      "Do not imply unsupported switching or live synchronization.",
+      "Do not decorate repeated work with distracting animation."
+    ]
+  }
+}

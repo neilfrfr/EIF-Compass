@@ -4,6 +4,7 @@ import type { FormEvent } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Role, View } from './data'
 import SubmissionBin from './SubmissionBin'
+import DetailDrawer from './DetailDrawer'
 import type {SubmissionRow} from './submissions'
 
 type RecordItem = { id: string; title: string; cohort_id?: string; description?: string; project_name?: string; project_id?: string|null; sprint_id?: string|null; milestone_id?: string|null; assignee_id?: string | null; due_date?: string; due_at?: string; removing?: boolean; priority?: string; status?: string; starts_at?: string; event_type?: string; location?: string }
@@ -13,7 +14,7 @@ type Project = {id:string;title:string;team_id:string}
 type Milestone = {id:string;title:string;project_id:string;sprint_id:string}
 type Submission = SubmissionRow
 type Editor = { kind: 'record'; item?: RecordItem }
-type Props = { client: SupabaseClient; role: Role; view: View; userId: string; cohortId: string; onChanged: () => void }
+type Props = { client: SupabaseClient; role: Role; view: View; userId: string; cohortId: string; onChanged: () => void; focusedRecordId?: string; onFocusConsumed?: () => void }
 const labels: Record<string, string> = {to_do:'To do',in_progress:'In progress',for_review:'For review',completed:'Completed',pending:'Pending',in_review:'In review',overdue:'Overdue'}
 function dateLabel(value?: string, time=false) {
  if (!value) return 'No deadline'
@@ -25,7 +26,7 @@ function localEventTime(value?: string) {
  const get=(k:string)=>p.find(x=>x.type===k)?.value
  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
 }
-export default function WorkManager({client,role,view,userId,cohortId,onChanged}:Props) {
+export default function WorkManager({client,role,view,userId,cohortId,onChanged,focusedRecordId,onFocusConsumed}:Props) {
  const table=view==='work'?'tasks':view==='requirements'?'requirements':'events'
  const singular=table==='tasks'?'task':table==='requirements'?'requirement':'event'
  const [records,setRecords]=useState<RecordItem[]>([])
@@ -39,6 +40,11 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
  const [error,setError]=useState('')
  const [notice,setNotice]=useState('')
  const [editor,setEditor]=useState<Editor|null>(null)
+ const [detailId,setDetailId]=useState<string|null>(null)
+ const [dirty,setDirty]=useState(false)
+ const [busySubmissions,setBusySubmissions]=useState<Set<string>>(()=>new Set())
+ function submissionBusy(key:string,value:boolean){setBusySubmissions(previous=>{if(previous.has(key)===value)return previous;const next=new Set(previous);if(value)next.add(key);else next.delete(key);return next})}
+ const [editorDirty,setEditorDirty]=useState(false)
  const [removing,setRemoving]=useState<RecordItem|null>(null)
  const [revision,setRevision]=useState(0)
  const [filter,setFilter]=useState('')
@@ -48,7 +54,7 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
  const [statusFilter,setStatusFilter]=useState('all')
  useEffect(()=>{
   let active=true
-  setLoading(true);setError('');setEditor(null);setRemoving(null);setRecords([]);setSubmissions([]);setMembers([]);setSprints([]);setProjects([]);setMilestones([]);setFilter('')
+  setLoading(true);setError('');setEditor(null);setRemoving(null)
   async function load(){
    try {
     const [result,people,submitted,sprintRows,projectRows,milestoneRows]=await Promise.all([
@@ -65,6 +71,8 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
   }
   void load();return()=>{active=false}
  },[client,cohortId,role,table,revision])
+ useEffect(()=>{setRecords([]);setSubmissions([]);setMembers([]);setSprints([]);setProjects([]);setMilestones([]);setDetailId(null);setDirty(false);setFilter('');setDueFilter('all');setSprintFilter('all');setPriorityFilter('all');setStatusFilter('all')},[cohortId,role,table])
+ useEffect(()=>{if(!focusedRecordId||loading)return;if(records.some(r=>r.id===focusedRecordId)){setDetailId(focusedRecordId);setDirty(false)}else setError('This item is unavailable. It may have been removed or you may not have access.');onFocusConsumed?.()},[focusedRecordId,loading,records,onFocusConsumed])
  function message(e:unknown){return typeof e==='object'&&e&&'message' in e?String(e.message):'Could not save. Please try again.'}
  async function write(operation:()=>PromiseLike<{data:unknown;error:unknown}>,success:string){
   if(busy)return
@@ -130,11 +138,11 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
   if(dueFilter==='none')return !r.due_date
   return true
  })
- return <section className="panel work-manager">
-  <div className="panel-heading"><div><h2>{table==='tasks'?'Tasks':table==='requirements'?'Requirements':'Events'}</h2></div><div className="manager-actions"><button className="text-button" disabled={busy||loading} onClick={()=>setRevision(v=>v+1)}>Refresh</button>{role==='lead'&&<button className="primary-button" disabled={loading||busy} onClick={()=>{setError('');setEditor({kind:'record'})}}>Add {singular}</button>}</div></div>
+ return <section className={`panel work-manager work-${table}`}>
+  <div className="panel-heading"><div><h2>{table==='tasks'?'Tasks':table==='requirements'?'Requirements':'Events'}</h2></div><div className="manager-actions"><button className="text-button" disabled={busy||loading} onClick={()=>setRevision(v=>v+1)}>Refresh</button>{role==='lead'&&<button className="primary-button" disabled={loading||busy} onClick={()=>{setError('');setEditorDirty(false);setEditor({kind:'record'})}}>Add {singular}</button>}</div></div>
   {error&&<p className="auth-error" role="alert">{error}</p>}{notice&&<p role="status" className="manager-notice">{notice}</p>}
-  {editor&&<form key={`${editor.kind}:${editor.item?.id || 'new'}`} className="record-form" onSubmit={save} noValidate aria-busy={busy}>
-   <h3>{`${editor.item?'Edit':'Add'} ${singular}`}</h3>
+  {editor&&<DetailDrawer title={`${editor.item?'Edit':'Add'} ${singular}`} busy={busy} dirty={editorDirty} onClose={()=>setEditor(null)}><form key={`${editor.kind}:${editor.item?.id || 'new'}`} className="record-form" onChange={()=>setEditorDirty(true)} onSubmit={save} noValidate aria-busy={busy}>
+   {error&&<p role="alert" className="auth-error">{error}</p>}
    <fieldset disabled={busy}>
    <>
     <label>Title<input name="title" defaultValue={editor.item?.title||''} maxLength={200} required/></label>
@@ -146,19 +154,35 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged}
      {table==='tasks'&&<><label>Project label for tasks without a project<input name="project_name" defaultValue={editor.item?.project_name||'Fellowship work'}/></label><label>Project<select name="project_id" defaultValue={editor.item?.project_id||''}><option value="">No project</option>{projects.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label><label>Sprint<select name="sprint_id" defaultValue={editor.item?.sprint_id||''}><option value="">No sprint</option>{sprints.map(s=><option key={s.id} value={s.id}>{projects.find(p=>p.id===s.project_id)?.title||'Project'} · {s.title}</option>)}</select><small>Select a sprint to link this task to its project.</small></label><label>Milestone<select name="milestone_id" defaultValue={editor.item?.milestone_id||''}><option value="">No milestone</option>{milestones.map(m=><option key={m.id} value={m.id}>{projects.find(p=>p.id===m.project_id)?.title||'Project'} · {m.title}</option>)}</select></label><label>Priority<select name="priority" defaultValue={editor.item?.priority||'medium'}>{['low','medium','high'].map(p=><option key={p}>{p}</option>)}</select></label><label>Status<select name="status" defaultValue={editor.item?.status||'to_do'}>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label></>}
     </>}
    </>
-   <div className="manager-actions"><button className="primary-button" type="submit">{busy?'Saving…':'Save'}</button><button className="text-button" type="button" onClick={()=>setEditor(null)}>Cancel</button></div>
+   <div className="manager-actions"><button className="primary-button" type="submit">{busy?'Saving…':'Save'}</button></div>
    </fieldset>
-  </form>}
-  <label className="manager-search">Search {table}<input value={filter} onChange={e=>setFilter(e.target.value)} placeholder={`Search ${table}`}/></label>
-  {table==='tasks'&&<div className="work-filters"><label>Due date<select value={dueFilter} onChange={e=>setDueFilter(e.target.value)}><option value="all">All dates</option><option value="overdue">Overdue</option><option value="today">Today</option><option value="next7">Next seven days</option><option value="upcoming">Today or later</option><option value="none">No deadline</option></select></label><label>Sprint<select value={sprintFilter} onChange={e=>setSprintFilter(e.target.value)}><option value="all">All sprints</option><option value="none">No sprint</option>{sprints.map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></label><label>Priority<select value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)}><option value="all">All priorities</option>{['low','medium','high'].map(p=><option key={p} value={p}>{p}</option>)}</select></label><label>Status<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">All statuses</option>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label><button className="text-button" onClick={()=>{setFilter('');setDueFilter('all');setSprintFilter('all');setPriorityFilter('all');setStatusFilter('all')}}>Reset filters</button></div>}
+  </form></DetailDrawer>}
+  <div className="filter-toolbar"><label className="manager-search">Search {table}<input value={filter} onChange={e=>setFilter(e.target.value)} placeholder={`Search ${table}`}/></label>
+  {table==='tasks'&&<div className="work-filters"><label>Due date<select value={dueFilter} onChange={e=>setDueFilter(e.target.value)}><option value="all">All dates</option><option value="overdue">Overdue</option><option value="today">Today</option><option value="next7">Next seven days</option><option value="upcoming">Today or later</option><option value="none">No deadline</option></select></label><label>Sprint<select value={sprintFilter} onChange={e=>setSprintFilter(e.target.value)}><option value="all">All sprints</option><option value="none">No sprint</option>{sprints.map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></label><label>Priority<select value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)}><option value="all">All priorities</option>{['low','medium','high'].map(p=><option key={p} value={p}>{p}</option>)}</select></label><label>Status<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">All statuses</option>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label>{(filter||dueFilter!=='all'||sprintFilter!=='all'||priorityFilter!=='all'||statusFilter!=='all')&&<button className="text-button" onClick={()=>{setFilter('');setDueFilter('all');setSprintFilter('all');setPriorityFilter('all');setStatusFilter('all')}}>Reset filters</button>}</div>}
   {table==='requirements'&&<label>Requirement status<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">All statuses</option>{Object.entries(requirementLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
-  {loading?<p role="status">Loading {table}…</p>:<div className="manager-list">{shown.map(r=><article className="manager-record" key={r.id}>
-   <div className="manager-record-heading"><h3>{r.title}</h3>{role==='lead'&&<div className="manager-actions"><button className="text-button" disabled={busy||r.removing} onClick={()=>{setError('');setRemoving(null);setEditor({kind:'record',item:r})}}>Edit</button><button className="text-button danger-button" disabled={busy} onClick={()=>{setError('');setEditor(null);setRemoving(r)}}>Remove</button></div>}</div>
-   {role==='lead'&&removing?.id===r.id&&<section className="remove-confirmation" role="region" aria-labelledby={`remove-${r.id}`}><h4 id={`remove-${r.id}`}>Remove “{r.title}”?</h4><p>This permanently removes the {singular} from your cohort.{table==='requirements'?' Linked intern submissions will also be removed.':''}</p><div className="manager-actions"><button autoFocus className="text-button" disabled={busy} onClick={()=>setRemoving(null)}>Keep {singular}</button><button className="primary-button danger-button" disabled={busy} onClick={()=>{if(role==='lead')void write(()=>table==='requirements'?removeRequirement(r.id):client.from(table).delete().eq('id',r.id).eq('cohort_id',cohortId).select('id'),`${singular[0].toUpperCase()+singular.slice(1)} removed.`)}}>{busy?'Removing…':`Remove ${singular}`}</button></div></section>}
-   {table==='requirements'&&role==='intern'&&<span className="data-pill">{requirementLabels[state(r)]}</span>}{r.removing&&<p role="status">Removal is paused. Retry Remove to finish cleanup.</p>}{r.description&&<p>{r.description}</p>}
+  {table!=='tasks'&&(filter||statusFilter!=='all')&&<button className="text-button" onClick={()=>{setFilter('');setStatusFilter('all')}}>Reset filters</button>}</div>
+  {!loading&&<p className="filter-summary">{shown.length} {singular}{shown.length===1?'':'s'}{shown.length!==records.length?` of ${records.length}`:''}</p>}
+  {loading?<p role="status">Loading {table}…</p>:<div className="manager-list">{shown.map(r=><article className="manager-record work-row" key={r.id}>
+   <div className="work-row-main"><div className="manager-record-heading"><h3><button className="record-open" onClick={()=>{setDirty(false);setDetailId(r.id)}}>{r.title}</button></h3></div>
    <p className="manager-meta">{table==='events'?`${dateLabel(r.starts_at,true)} · ${r.event_type} · ${r.location||'Location to follow'}`:`${r.due_at?dateLabel(r.due_at,true):dateLabel(r.due_date)} · ${r.assignee_id?(members.find(m=>m.id===r.assignee_id)?.display_name||(r.assignee_id===userId?'Assigned to you':'Assigned intern')):'Shared with cohort'}`}</p>
-   {table==='tasks'&&<><p className="manager-meta">{projects.find(p=>p.id===r.project_id)?.title||r.project_name} · {sprints.find(s=>s.id===r.sprint_id)?.title||'No sprint'} · {r.priority} priority</p>{role==='intern'&&r.assignee_id===userId?<label>Task status<select aria-label={`Status for ${r.title}`} value={r.status} disabled={busy} onChange={e=>taskStatus(r,e.target.value)}>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label>:<span className="data-pill">{labels[r.status||'to_do']}</span>}</>}
-   {table==='requirements'&&(role==='intern'?<SubmissionBin client={client} role={role} userId={userId} requirement={r} submission={mine(r)} onChanged={()=>{setRevision(v=>v+1);onChanged()}}/>:<div className="submission-list"><h4>Intern submissions</h4>{submissions.filter(s=>s.requirement_id===r.id).map(s=><div key={s.user_id}><strong>{members.find(m=>m.id===s.user_id)?.display_name||'Intern'}</strong><SubmissionBin client={client} role={role} userId={userId} requirement={r} submission={s} onChanged={()=>{setRevision(v=>v+1);onChanged()}}/></div>)}{!submissions.some(s=>s.requirement_id===r.id)&&<p>No submissions yet.</p>}</div>)}
+   {table==='tasks'&&<p className="manager-meta">{projects.find(p=>p.id===r.project_id)?.title||r.project_name||'Fellowship work'} · {sprints.find(s=>s.id===r.sprint_id)?.title||'No sprint'}</p>}
+   {r.removing&&<p role="status">Removal is paused. Retry Remove to finish cleanup.</p>}
+   </div>
+   <div className="record-status">{table==='tasks'&&<><span>{r.priority||'medium'} priority</span>{role==='intern'&&r.assignee_id===userId?<label><span className="sr-only">Task status</span><select aria-label={`Status for ${r.title}`} value={r.status} disabled={busy} onChange={e=>taskStatus(r,e.target.value)}>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label>:<span className="data-pill">{labels[r.status||'to_do']}</span>}</>}
+   {table==='requirements'&&(role==='intern'?<span className="data-pill">{requirementLabels[state(r)]}</span>:<span>{submissions.filter(s=>s.requirement_id===r.id&&s.status==='in_review').length} awaiting review</span>)}
+   {table==='requirements'&&<button className="text-button" onClick={()=>{setDirty(false);setDetailId(r.id)}}>{role==='lead'?'Review submissions':'Open requirement'}</button>}
+   </div>
+   {role==='lead'&&<div className="manager-actions"><button className="text-button" disabled={busy||r.removing} onClick={()=>{setError('');setRemoving(null);setEditorDirty(false);setEditor({kind:'record',item:r})}}>Edit</button><button className="text-button danger-button" disabled={busy} onClick={()=>{setError('');setEditor(null);setRemoving(r)}}>Remove</button></div>}
+   {role==='lead'&&removing?.id===r.id&&<section className="remove-confirmation" role="region" aria-labelledby={`remove-${r.id}`}><h4 id={`remove-${r.id}`}>Remove “{r.title}”?</h4><p>This permanently removes the {singular} from your cohort.{table==='requirements'?' Linked intern submissions will also be removed.':''}</p><div className="manager-actions"><button autoFocus className="text-button" disabled={busy} onClick={()=>setRemoving(null)}>Keep {singular}</button><button className="primary-button danger-button" disabled={busy} onClick={()=>{if(role==='lead')void write(()=>table==='requirements'?removeRequirement(r.id):client.from(table).delete().eq('id',r.id).eq('cohort_id',cohortId).select('id'),`${singular[0].toUpperCase()+singular.slice(1)} removed.`)}}>{busy?'Removing…':`Remove ${singular}`}</button></div></section>}
+
   </article>)}{!shown.length&&<p>{records.length?'No records match these filters.':`No ${table} yet. ${role==='lead'?`Use Add ${singular} to get started.`:'Your lead will add records here.'}`}</p>}</div>}
+  {detailId&&records.find(r=>r.id===detailId)&&(()=>{const r=records.find(r=>r.id===detailId)!;return <DetailDrawer key={r.id} title={r.title} dirty={dirty} busy={busySubmissions.size>0||busy} onClose={()=>{setDetailId(null);setDirty(false)}}>
+   <div className="record-detail"><p className="manager-meta">{r.due_at?dateLabel(r.due_at,true):table==='events'?dateLabel(r.starts_at,true):dateLabel(r.due_date)}</p>{r.description&&<p className="record-description">{r.description}</p>}
+    {table==='tasks'&&<><p className="manager-meta">{projects.find(p=>p.id===r.project_id)?.title||r.project_name||'Fellowship work'} · {sprints.find(s=>s.id===r.sprint_id)?.title||'No sprint'} · {r.priority||'medium'} priority</p>{role==='intern'&&r.assignee_id===userId?<label>Task status<select aria-label={`Detail status for ${r.title}`} value={r.status} disabled={busy} onChange={e=>taskStatus(r,e.target.value)}>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label>:<span className="data-pill">{labels[r.status||'to_do']}</span>}{error&&<p role="alert" className="auth-error">{error}</p>}{notice&&<p role="status">{notice}</p>}</>}
+    {table==='events'&&<p>{r.event_type} · {r.location||'Location to follow'}</p>}
+   {table==='requirements'&&(role==='intern'?<SubmissionBin client={client} role={role} userId={userId} requirement={r} submission={mine(r)} onBusyChange={value=>submissionBusy(`${r.id}:${userId}`,value)} onDirtyChange={setDirty} onChanged={()=>{setRevision(v=>v+1);onChanged()}}/>:<div className="submission-list"><h4>Intern submissions</h4>{submissions.filter(s=>s.requirement_id===r.id).map(s=><div key={s.user_id}><strong>{members.find(m=>m.id===s.user_id)?.display_name||'Intern'}</strong><SubmissionBin client={client} role={role} userId={userId} requirement={r} submission={s} onBusyChange={value=>submissionBusy(`${r.id}:${s.user_id}`,value)} onDirtyChange={setDirty} onChanged={()=>{setRevision(v=>v+1);onChanged()}}/></div>)}{!submissions.some(s=>s.requirement_id===r.id)&&<p>No submissions yet.</p>}</div>)}
+   </div>
+  </DetailDrawer>})()}
+
  </section>
 }

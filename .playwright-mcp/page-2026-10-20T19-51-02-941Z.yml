@@ -1,0 +1,31 @@
+- main [ref=f1e3]:
+  - region "About EIF Compass" [ref=f1e4]:
+    - strong [ref=f1e6]: eif compass
+    - generic [ref=f1e7]:
+      - heading [level=1] [ref=f1e8]:
+        - text: Your next chapter starts with a
+        - emphasis [ref=f1e9]: clear direction.
+      - paragraph [ref=f1e10]: A shared space for the work, ideas, and people that shape your fellowship.
+    - generic [ref=f1e20]:
+      - generic [ref=f1e21]: Find your focus
+      - generic [ref=f1e22]: Build together
+      - generic [ref=f1e23]: Move forward
+    - generic [ref=f1e24]: Innovation Fellowship
+  - generic [ref=f1e25]:
+    - generic [ref=f1e26]:
+      - heading "Welcome back." [level=2] [ref=f1e27]
+      - paragraph [ref=f1e28]: Sign in to your fellowship workspace.
+      - generic [ref=f1e29]:
+        - generic [ref=f1e30]: Email address
+        - textbox "Email address" [ref=f1e31]:
+          - /placeholder: you@example.com
+        - generic [ref=f1e32]: Password
+        - generic [ref=f1e33]:
+          - textbox "Password" [ref=f1e34]:
+            - /placeholder: Enter your password
+          - button "Show password" [ref=f1e35] [cursor=pointer]: Show
+        - button "Sign in" [ref=f1e36] [cursor=pointer]
+      - paragraph [ref=f1e39]:
+        - text: Need access or help signing in?
+        - strong [ref=f1e40]: Contact your fellowship lead.
+    - generic [ref=f1e41]: Your fellowship, in focus.

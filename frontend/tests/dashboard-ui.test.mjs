@@ -15,8 +15,8 @@ Object.assign(globalThis,{window:dom.window,document:dom.window.document,IS_REAC
 const rows={cohorts:{id:'c',name:'Database cohort',starts_on:'2026-09-30',ends_on:'2026-11-24'},profiles:[{id:'a',display_name:'Database Intern A',role:'intern',team_name:null},{id:'b',display_name:'Database Intern B',role:'intern',team_name:null}],tasks:[{id:'t1',title:'A private task',assignee_id:'a',status:'completed',due_date:'2026-10-07'},{id:'t2',title:'B private task',assignee_id:'b',status:'to_do',due_date:'2026-10-04'}],requirements:[{id:'r',title:'Actual reflection',status:'pending',assignee_id:null,due_date:'2026-10-04'}],requirement_submissions:[{requirement_id:'r',user_id:'a',status:'in_review',submission_url:'https://example.com'}],events:[{id:'e',title:'Actual future event',starts_at:'2099-10-07T14:00:00+08:00'}],blockers:[{id:'block',reporter_id:'b',project_id:'project',status:'open',description:'Missing access'}],milestones:[],projects:[{id:'project',title:'Team research',team_id:'team'}],teams:[{id:'team',name:'Research'}],team_memberships:[{team_id:'team',user_id:'a'},{team_id:'team',user_id:'b'}]}
 const client={from(table){return {select(){return this},eq(){return this},maybeSingle(){return Promise.resolve({data:rows[table],error:null})},then(resolve,reject){return Promise.resolve({data:rows[table],error:null}).then(resolve,reject)}}}}
 const root=createRoot(document.getElementById('root'))
-let destination
-const render=async(role,revision=0)=>act(async()=>root.render(React.createElement(Dashboard,{client,role,userId:'a',cohortId:'c',revision,onNavigate(view){destination=view}})))
+let destination,recordId
+const render=async(role,revision=0)=>act(async()=>root.render(React.createElement(Dashboard,{client,role,userId:'a',cohortId:'c',revision,onNavigate(view,id){destination=view;recordId=id}})))
 await render('lead')
 assert.ok(document.querySelector('.lead-dashboard'))
 assert.match(document.body.textContent,/Database cohort/)
@@ -47,7 +47,10 @@ assert.match(document.body.textContent,/Under review/)
 assert.match(document.body.textContent,/Actual future event/)
 rows.tasks.push({id:'explain',title:'Write summary',assignee_id:'a',status:'to_do',due_date:'2099-10-20'})
 let explained
+await render('intern',3)
+await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Open task').click())
+assert.equal(destination,'work');assert.equal(recordId,'explain')
 await act(async()=>root.render(React.createElement(Dashboard,{client,role:'intern',userId:'a',cohortId:'c',revision:3,onNavigate(){},onExplain(action){explained=action}})))
-await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Explain this suggestion').click());assert.equal(explained.id,'explain')
+await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Why this?').click());assert.equal(explained.id,'explain')
 await act(async()=>root.unmount())
 console.log('PASS: database-backed role layouts, intern isolation, review queue, drill-down and navigation')

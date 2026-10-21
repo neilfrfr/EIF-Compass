@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Role, View } from './data'
 import { supabase } from './lib/supabase'
@@ -12,7 +12,7 @@ import GoogleCalendar from './GoogleCalendar'
 import Agenda from './Agenda'
 import InternFlows from './InternFlows'
 
-type IconName = 'home' | 'tasks' | 'check' | 'calendar' | 'bell' | 'search' | 'chevron' | 'arrow' | 'clock' | 'spark' | 'trend' | 'users' | 'flag' | 'plus' | 'dots' | 'lock' | 'close'
+type IconName = 'home' | 'tasks' | 'check' | 'calendar' | 'bell' | 'search' | 'chevron' | 'arrow' | 'clock' | 'spark' | 'trend' | 'users' | 'flag' | 'plus' | 'dots' | 'lock' | 'close' | 'feedback' | 'blocker' | 'menu'
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
@@ -32,6 +32,9 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     plus: <><path d="M12 5v14M5 12h14"/></>,
     dots: <><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></>,
     lock: <><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></>,
+    feedback: <><path d="M21 11a8 8 0 0 1-8 8H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="M7 8h10M7 12h7"/></>,
+    blocker: <><path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v4M12 17h.01"/></>,
+    menu: <><path d="M4 6h16M4 12h16M4 18h16"/></>,
     close: <><path d="m6 6 12 12M18 6 6 18"/></>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
@@ -48,7 +51,13 @@ export function Workspace({ session }: { session: Session }) {
   useEffect(()=>{if(view!=='assistant')setAssistantExplanation(null)},[view])
   const [profile, setProfile] = useState<{ display_name?: string; role?: Role; team_name?: string; cohort_id?: string } | null>(null)
   const [loadingData, setLoadingData] = useState(false)
-  const [connected, setConnected] = useState(false)
+  const [, setConnected] = useState(false)
+  const [cohortName, setCohortName] = useState('Your fellowship')
+  const [focusedRecordId, setFocusedRecordId] = useState<string>()
+  const navigationDialog = useRef<HTMLDialogElement>(null)
+  const navigationAnimation = useRef<Animation | null>(null)
+  const navigationClosing = useRef(false)
+  const pageTitle = useRef<HTMLHeadingElement>(null)
   const [toast, setToast] = useState('')
   const [revision, setRevision] = useState(0)
   const [workspaceError, setWorkspaceError] = useState('')
@@ -66,9 +75,9 @@ export function Workspace({ session }: { session: Session }) {
   useEffect(() => {
     const navigate = (event: Event) => {
       const target = (event as CustomEvent<View>).detail
-      if (target) setView(target)
+      if (target) { setFocusedRecordId(undefined); setView(target) }
     }
-    const openWork = () => setView('work')
+    const openWork = () => { setFocusedRecordId(undefined); setView('work') }
     window.addEventListener('set-view', navigate)
     window.addEventListener('open-work-view', openWork)
     return () => {
@@ -112,14 +121,71 @@ export function Workspace({ session }: { session: Session }) {
     return () => { active = false }
   }, [session, revision])
 
+  useEffect(() => {
+    let active = true
+    setCohortName('Your fellowship')
+    if (supabase && profile?.cohort_id) void supabase.from('cohorts').select('name').eq('id', profile.cohort_id).maybeSingle().then(({data}) => { if (active && data?.name) setCohortName(data.name) })
+    return () => { active = false }
+  }, [profile?.cohort_id])
+  useEffect(() => () => navigationAnimation.current?.cancel(), [])
+
+  function openNavigation(instant = false) {
+    const dialog = navigationDialog.current
+    if (!dialog) return
+    navigationAnimation.current?.cancel()
+    navigationClosing.current = false
+    delete dialog.dataset.closing
+    if (!dialog.open) dialog.showModal()
+    const panel = dialog.querySelector<HTMLElement>('.mobile-sidebar')
+    if (!panel?.animate || instant || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const animation = panel.animate([{ transform: 'translateX(-100%)' }, { transform: 'translateX(0)' }], {
+      duration: 300, easing: 'cubic-bezier(.32,.72,0,1)', fill: 'both',
+    })
+    navigationAnimation.current = animation
+    void animation.finished.then(() => {
+      if (navigationAnimation.current === animation) { navigationAnimation.current = null; animation.cancel() }
+    }).catch(() => {})
+  }
+
+  function closeNavigation(afterClose?: () => void, instant = false) {
+    const dialog = navigationDialog.current
+    if (!dialog?.open) { afterClose?.(); return }
+    const panel = dialog.querySelector<HTMLElement>('.mobile-sidebar')
+    const from = panel ? window.getComputedStyle(panel).transform : 'none'
+    navigationAnimation.current?.cancel()
+    const finish = () => {
+      navigationAnimation.current = null
+      navigationClosing.current = false
+      delete dialog.dataset.closing
+      dialog.close()
+      afterClose?.()
+    }
+    if (!panel?.animate || instant || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { finish(); return }
+    navigationClosing.current = true
+    dialog.dataset.closing = 'true'
+    const animation = panel.animate([{ transform: from }, { transform: 'translateX(-100%)' }], {
+      duration: 300, easing: 'cubic-bezier(.32,.72,0,1)', fill: 'both',
+    })
+    navigationAnimation.current = animation
+    void animation.finished.then(() => {
+      if (navigationAnimation.current === animation) { finish(); animation.cancel() }
+    }).catch(() => {})
+  }
+
+  function navigate(next: View, recordId?: string) {
+    if (navigationClosing.current) return
+    setAssistantExplanation(null); setFocusedRecordId(recordId); setView(next)
+    const focusTitle = () => { if (!recordId) window.requestAnimationFrame(() => pageTitle.current?.focus()) }
+    closeNavigation(focusTitle, document.activeElement?.matches(':focus-visible'))
+  }
   const activeNav: { id: View; label: string; icon: IconName }[] = [
     { id: 'overview', label: 'Overview', icon: 'home' },
     { id: 'work', label: role === 'lead' ? 'Cohort tasks' : 'My work', icon: 'tasks' },
     { id: 'requirements', label: 'Requirements', icon: 'check' },
     { id: 'calendar', label: 'Calendar', icon: 'calendar' },
     { id: 'projects', label: 'Projects', icon: 'flag' },
-    { id: 'feedback', label: 'Feedback', icon: 'check' },
-    { id: 'blockers', label: 'Blockers', icon: 'lock' },
+    { id: 'feedback', label: 'Feedback', icon: 'feedback' },
+    { id: 'blockers', label: 'Blockers', icon: 'blocker' },
     { id: 'notifications', label: 'Notifications', icon: 'bell' },
     { id: 'assistant', label: 'AI assistant', icon: 'spark' },
   ]
@@ -138,42 +204,50 @@ export function Workspace({ session }: { session: Session }) {
 
   if (role === null) return <main className="login-page login-checking"><section className="login-card"><h1>{loadingData ? 'Loading your workspace…' : 'Workspace unavailable'}</h1>{workspaceError && <p role="alert">{workspaceError}</p>}{!loadingData && <div className="manager-actions"><button className="primary-button" onClick={() => setRevision(value => value + 1)}>Retry</button><button className="text-button" onClick={() => void signOut()}>Sign out</button></div>}</section></main>
 
+  const descriptions: Record<View, string> = {
+    overview: role === 'lead' ? 'Your cohort, moving forward.' : 'A little direction for the work ahead.',
+    work: role === 'lead' ? 'Keep team priorities clear and work moving.' : 'Your priorities, deadlines, and progress.',
+    requirements: role === 'lead' ? 'Review submissions and guide the next step.' : 'Prepare your work. Share your progress.',
+    calendar: 'Make room for what comes next.', projects: 'The work you are building together.',
+    feedback: 'Useful perspective for your next step.', blockers: 'Surface obstacles. Find a way forward.',
+    notifications: 'Updates from your fellowship.', assistant: 'Think through your next step with Compass.',
+  }
+  const sidebarContent = (mobile = false) => <>
+    <div className="brand"><div className="brand-mark"><CompassMark /></div><div><strong>eif compass</strong><span>Innovation Fellowship</span></div></div>
+    {mobile && <button className="nav-close" aria-label="Close navigation" onClick={event => closeNavigation(undefined, event.detail === 0)}><Icon name="close"/></button>}
+    <div className="cohort-identity"><span className="cohort-symbol" aria-hidden="true">EIF</span><div><strong>{cohortName}</strong><span>{role === 'lead' ? 'Fellowship lead' : 'Fellow workspace'}</span></div></div>
+    <nav className="side-nav" aria-label={mobile ? 'Mobile navigation' : 'Main navigation'}>
+      {activeNav.map((item, index) => <div key={item.id}>{[0,4,7].includes(index) && <div className="side-label">{index===0?'Daily work':index===4?'Fellowship':'Tools'}</div>}<button aria-current={view===item.id?'page':undefined} className={`nav-item ${view===item.id?'selected':''}`} onClick={() => navigate(item.id)}><Icon name={item.icon}/><span>{item.label}</span></button></div>)}
+    </nav>
+    <div className="side-spacer"/>
+    <details className="account-menu" onKeyDown={event => {if(event.key==='Escape'){event.currentTarget.open=false;event.currentTarget.querySelector('summary')?.focus()}}}>
+      <summary className="profile-card"><div className="avatar">{initials(displayName)}</div><div className="profile-info"><strong>{displayName}</strong><span>{role==='lead'?'Fellowship lead':'Fellow'}</span></div><Icon name="chevron" size={16}/></summary>
+      <div className="account-options"><p>{session.user.email || displayName}</p><button onClick={() => void signOut()}>Sign out</button></div>
+    </details>
+  </>
   return (
     <div className={`app-shell workspace-${role}`}>
-      <aside className="sidebar">
-        <div className="brand"><div className="brand-mark"><CompassMark /></div><div><strong>eif compass</strong><span>INNOVATION FELLOWSHIP</span></div></div>
-        <div className="cohort-switch"><span className="cohort-dot"/><span>Fellowship workspace</span><Icon name="chevron" size={15}/></div>
-        <div className="side-label">WORKSPACE</div>
-        <nav className="side-nav" aria-label="Main navigation">
-          {activeNav.map(item => <button key={item.id} aria-label={item.label} className={`nav-item ${view === item.id ? 'selected' : ''}`} onClick={() => {setAssistantExplanation(null);setView(item.id)}}><Icon name={item.icon}/><span>{item.label}</span></button>)}
-        </nav>
-        <div className="side-spacer"/>
-        <button className="profile-card" onClick={() => void signOut()} title="Sign out" aria-label="Sign out"><div className="avatar avatar-lilac">{initials(displayName)}</div><div className="profile-info"><strong>{displayName}</strong><span>Sign out</span></div><Icon name="dots" size={16}/></button>
-        <div className="sidebar-foot"><span className="live-dot"/> Your fellowship, in focus</div>
-      </aside>
-
-      <main className="main-area">
+      <a className="skip-link" href="#workspace-content">Skip to content</a>
+      <aside className="sidebar">{sidebarContent()}</aside>
+      <dialog ref={navigationDialog} className="mobile-navigation" aria-label="Workspace navigation" onCancel={event=>{event.preventDefault();closeNavigation(undefined,true)}} onClick={event=>{if(event.target===event.currentTarget)closeNavigation()}}><div className="mobile-sidebar">{sidebarContent(true)}</div></dialog>
+      <main className="main-area" id="workspace-content">
         <header className="topbar">
-          <div className="breadcrumb"><span>EIF Compass</span><span className="crumb-slash">/</span><strong>{heading}</strong></div>
-          <div className="top-actions">
-            <div className="top-divider"/>
-            <button className="mini-profile" onClick={() => void signOut()} aria-label="Sign out"><div className="avatar avatar-lilac">{initials(displayName)}</div><Icon name="chevron" size={14}/></button>
-          </div>
+          <button className="mobile-menu-button" aria-label="Open navigation" onClick={event => openNavigation(event.detail === 0)}><Icon name="menu"/></button>
+          <div className="breadcrumb"><span>Workspace</span><span className="crumb-slash">/</span><strong>{heading}</strong></div>
+          <span className="workspace-context">{profile?.team_name || cohortName}</span>
         </header>
-
         <div className="page-wrap">
           <div className="page-heading">
-            <div><h1>{view === 'overview' ? `Welcome, ${displayName.split(' ')[0]}.` : heading}</h1><p>{role === 'lead' ? 'Here’s how your cohort is moving this week.' : 'A clear view of your fellowship, all in one place.'}</p></div>
-            <div className="heading-actions"><span className="data-pill">{role === 'lead' ? 'Lead workspace' : 'Intern workspace'}</span><button className="text-button" onClick={() => setRevision(value => value + 1)}>Refresh workspace</button><div className={`data-pill ${connected ? 'is-connected' : ''}`}><span className="data-dot"/>{connected ? 'Profile verified' : (loadingData ? 'Loading workspace…' : 'Workspace unavailable')}</div><button className="primary-button" onClick={() => role === 'lead' ? setView('work') : setView('requirements')}><Icon name={role === 'lead' ? 'tasks' : 'check'} size={16}/>{role === 'lead' ? 'View team tasks' : 'View requirements'}</button></div>
+            <div><h1 ref={pageTitle} tabIndex={-1}>{heading}</h1><p>{descriptions[view]}</p></div>
+            {view==='overview' && <button className="text-button refresh-workspace" disabled={loadingData} onClick={() => setRevision(value => value + 1)}>{loadingData?'Refreshing…':'Refresh overview'}</button>}
           </div>
+          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={navigate} onExplain={action=>{setAssistantExplanation({question:`Explain why “${action.title}” is my next recommended action, using its recorded reason and deadline. Give a practical first step.`,id:action.id,view:action.view,scope:`${session.user.id}:${role}:${profile.cohort_id}`});setView('assistant')}}/> : view === 'assistant' ? <Assistant key={`${session.user.id}:${role}:${profile.cohort_id}`} client={supabase} userId={session.user.id} role={role} cohortId={profile.cohort_id} onNavigate={navigate} initialExplanation={assistantExplanation?.scope===`${session.user.id}:${role}:${profile.cohort_id}`?assistantExplanation:undefined}/> : view==='calendar'?<><div className="manager-actions calendar-action">{role==='lead'&&<button className="text-button" onClick={()=>setShowEventManager(v=>!v)} aria-expanded={showEventManager}>{showEventManager?'Hide event manager':'Manage events'}</button>}<button className="text-button" onClick={()=>setShowSync(v=>!v)} aria-expanded={showSync}>{showSync?'Hide Google sync':'Sync to Google Calendar'}</button></div><Agenda client={supabase} cohortId={profile.cohort_id} revision={revision}/>{showSync&&<GoogleCalendar client={supabase} cohortId={profile.cohort_id}/ >}{role==='lead'&&showEventManager&&<WorkManager focusedRecordId={focusedRecordId} onFocusConsumed={() => setFocusedRecordId(undefined)} key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>}</>:['projects','feedback','blockers','notifications'].includes(view)?<InternFlows onNavigate={navigate} focusedRecordId={focusedRecordId} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>:<WorkManager focusedRecordId={focusedRecordId} onFocusConsumed={() => setFocusedRecordId(undefined)} key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
 
-          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={setView} onExplain={action=>{setAssistantExplanation({question:`Explain why “${action.title}” is my next recommended action, using its recorded reason and deadline. Give a practical first step.`,id:action.id,view:action.view,scope:`${session.user.id}:${role}:${profile.cohort_id}`});setView('assistant')}}/> : view === 'assistant' ? <Assistant key={`${session.user.id}:${role}:${profile.cohort_id}`} client={supabase} userId={session.user.id} role={role} cohortId={profile.cohort_id} onNavigate={setView} initialExplanation={assistantExplanation?.scope===`${session.user.id}:${role}:${profile.cohort_id}`?assistantExplanation:undefined}/> : view==='calendar'?<><div className="manager-actions calendar-action">{role==='lead'&&<button className="text-button" onClick={()=>setShowEventManager(v=>!v)} aria-expanded={showEventManager}>{showEventManager?'Hide event manager':'Manage events'}</button>}<button className="text-button" onClick={()=>setShowSync(v=>!v)} aria-expanded={showSync}>{showSync?'Hide Google sync':'Sync to Google Calendar'}</button></div><Agenda client={supabase} cohortId={profile.cohort_id} revision={revision}/>{showSync&&<GoogleCalendar client={supabase} cohortId={profile.cohort_id}/ >}{role==='lead'&&showEventManager&&<WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>}</>:['projects','feedback','blockers','notifications'].includes(view)?<InternFlows client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>:<WorkManager key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
-
-          <footer className="page-footer"><span>EIF COMPASS <span className="footer-sep">·</span> FELLOWSHIP COHORT 2026</span><span>Small steps, meaningful progress.</span></footer>
+          <footer className="page-footer"><span>EIF COMPASS <span className="footer-sep">·</span> {cohortName}</span><span>Small steps, meaningful progress.</span></footer>
         </div>
       </main>
 
-      {toast && <div className="toast"><span className="toast-check">✓</span>{toast}</div>}
+      {toast && <div className="toast" role="status">{toast}</div>}
 
     </div>
   )
