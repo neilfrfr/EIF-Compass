@@ -506,7 +506,7 @@ body:has(.mobile-navigation[open]) {
   border-radius: 50%;
   filter: blur(70px);
   opacity: 0.55;
-  animation: aurora-drift 18s ease-in-out infinite alternate;
+  animation: aurora-drift 18s var(--ease-in-out) infinite alternate;
 }
 
 .aurora i:nth-child(1) {
@@ -661,7 +661,7 @@ body:has(.mobile-navigation[open]) {
 /* Page switch: the old page lifts away, then sections rise in with a stagger. Never the theme circle. */
 /* An animation, not a transition: swapping off `rise` would otherwise jump straight to the end state. */
 .page-leaving > * {
-  animation: lift 0.16s ease both;
+  animation: lift 0.16s var(--ease-out) both;
 }
 
 @keyframes lift {
@@ -683,11 +683,6 @@ body:has(.mobile-navigation[open]) {
 .page-entering > :nth-child(5) { --i: 4; }
 .page-entering > :nth-child(6) { --i: 5; }
 .page-entering > :nth-child(n+7) { --i: 6; }
-
-/* A transform or filter would trap the fixed detail drawer opened on arrival. */
-.page-entering > :has(.detail-overlay) {
-  animation: none;
-}
 
 @keyframes rise {
   from {
