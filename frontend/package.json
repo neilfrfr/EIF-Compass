@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json && vite build",
     "preview": "vite preview",
-    "test": "node tests/fixture.test.mjs && node tests/theme.test.mjs && node tests/theme-tokens.test.mjs && node tests/interaction-effects.test.mjs && node tests/auth-ui.test.mjs && node tests/workflows.test.mjs && node tests/dashboard.test.mjs && node tests/dashboard-ui.test.mjs && node tests/role-refresh.test.mjs && node tests/assistant-ui.test.mjs && node tests/submissions.test.mjs && node tests/submission-bin-ui.test.mjs && node tests/google-calendar-ui.test.mjs && node tests/intern-flows.test.mjs"
+    "test": "node tests/fixture.test.mjs && node tests/theme.test.mjs && node tests/theme-tokens.test.mjs && node tests/interaction-effects.test.mjs && node tests/motion.test.mjs && node tests/auth-ui.test.mjs && node tests/workflows.test.mjs && node tests/dashboard.test.mjs && node tests/dashboard-ui.test.mjs && node tests/role-refresh.test.mjs && node tests/assistant-ui.test.mjs && node tests/submissions.test.mjs && node tests/submission-bin-ui.test.mjs && node tests/google-calendar-ui.test.mjs && node tests/intern-flows.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",

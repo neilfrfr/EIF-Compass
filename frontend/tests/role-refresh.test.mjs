@@ -5,11 +5,11 @@ import React,{act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {JSDOM} from 'jsdom'
 mkdirSync('.test-output',{recursive:true})
-for(const name of ['assistant-history','Assistant','App','AuthGate','WorkManager','Dashboard','dashboard-model','data','SubmissionBin','submissions','GoogleCalendar','Agenda','InternFlows','DetailDrawer']){
-let content=ts.transpileModule(readFileSync(`src/${name}.${['assistant-history','data','dashboard-model','submissions'].includes(name)?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
+for(const name of ['assistant-history','Assistant','App','AuthGate','WorkManager','Dashboard','dashboard-model','data','SubmissionBin','submissions','GoogleCalendar','Agenda','InternFlows','DetailDrawer','motion','theme','ThemeToggle','CompassLogo']){
+let content=ts.transpileModule(readFileSync(`src/${name}.${['assistant-history','data','dashboard-model','submissions','motion','theme'].includes(name)?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 content=content.replace("import './assistant.css';",'').replace("import './auth.css';",'')
 content=content.replaceAll("'./lib/supabase'","'./test-client.js'")
-for(const dep of ['assistant-history','Assistant','AuthGate','WorkManager','Dashboard','dashboard-model','data','SubmissionBin','submissions','GoogleCalendar','Agenda','InternFlows','DetailDrawer'])content=content.replaceAll(`'./${dep}'`,`'./${dep}.js'`)
+for(const dep of ['assistant-history','Assistant','AuthGate','WorkManager','Dashboard','dashboard-model','data','SubmissionBin','submissions','GoogleCalendar','Agenda','InternFlows','DetailDrawer','motion','theme','ThemeToggle','CompassLogo'])content=content.replaceAll(`'./${dep}'`,`'./${dep}.js'`)
 writeFileSync(`.test-output/${name}.js`,content)
 }
 let role='intern',fail=false,signOuts=0
@@ -17,8 +17,9 @@ const client={auth:{async signOut(){signOuts++;return {error:null}}},from(){retu
 globalThis.__testClient=client
 writeFileSync('.test-output/test-client.js','export const supabase = globalThis.__testClient;')
 const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'})
-Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,FormData:dom.window.FormData,IS_REACT_ACT_ENVIRONMENT:true})
+Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,MutationObserver:dom.window.MutationObserver,FormData:dom.window.FormData,IS_REACT_ACT_ENVIRONMENT:true})
 window.requestAnimationFrame=callback=>{callback();return 0}
+window.scrollTo=()=>{}
 const navigationAnimations=[]
 window.matchMedia=()=>({matches:false})
 dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true}
@@ -65,10 +66,12 @@ assert.equal(signOuts,0,'Opening account menu must not sign out')
 assert.equal(account.open,true)
 await act(async()=>account.dispatchEvent(new window.KeyboardEvent('keydown',{key:'Escape',bubbles:true})))
 assert.equal(account.open,false,'Escape closes account disclosure')
-await act(async()=>[...document.querySelectorAll('.sidebar button')].find(b=>b.textContent==='My work').click())
-assert.equal(document.querySelector('.sidebar [aria-current="page"]').textContent,'My work')
+await act(async()=>[...document.querySelectorAll('.sidebar button')].find(b=>b.querySelector('span')?.textContent==='My work').click())
+assert.equal(document.querySelector('.sidebar [aria-current="page"] span').textContent,'My work')
+await act(async()=>new Promise(resolve=>setTimeout(resolve,200)))
 assert.equal(document.querySelector('h1').textContent,'My work')
-await act(async()=>[...document.querySelectorAll('.sidebar button')].find(b=>b.textContent==='Overview').click())
+await act(async()=>[...document.querySelectorAll('.sidebar button')].find(b=>b.querySelector('span')?.textContent==='Overview').click())
+await act(async()=>new Promise(resolve=>setTimeout(resolve,200)))
 await act(async()=>account.querySelector('summary').click())
 await act(async()=>[...account.querySelectorAll('button')].find(b=>b.textContent==='Sign out').click())
 assert.equal(signOuts,1,'Only explicit Sign out action signs out')

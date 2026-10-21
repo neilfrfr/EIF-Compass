@@ -1,0 +1,9 @@
+/** Inline /compass-mark.svg so the arc can draw and the needle can settle. */
+export default function CompassLogo({size=32,animate=false}:{size?:number;animate?:boolean}){
+  return <svg className={`compass-svg${animate?' compass-animate':''}`} width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false">
+    <rect width="64" height="64" rx="18" fill="#deeee7"/>
+    <path className="arc" d="M44 19a19 19 0 1 0 0 26" stroke="#245862" strokeWidth="5" strokeLinecap="round"/>
+    <g className="needle"><path d="m46 18-8 20-20 8 8-20Z" fill="#137779"/><path d="m46 18-8 20-6-6Z" fill="#245862"/></g>
+    <circle cx="32" cy="32" r="2.5" fill="#deeee7"/>
+  </svg>
+}

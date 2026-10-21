@@ -11,6 +11,9 @@ import type {DashboardExplanation} from './Assistant'
 import GoogleCalendar from './GoogleCalendar'
 import Agenda from './Agenda'
 import InternFlows from './InternFlows'
+import ThemeToggle from './ThemeToggle'
+import CompassLogo from './CompassLogo'
+import {reducedMotion,usePageTransition,useSlidingIndicator} from './motion'
 
 type IconName = 'home' | 'tasks' | 'check' | 'calendar' | 'bell' | 'search' | 'chevron' | 'arrow' | 'clock' | 'spark' | 'trend' | 'users' | 'flag' | 'plus' | 'dots' | 'lock' | 'close' | 'feedback' | 'blocker' | 'menu'
 
@@ -58,6 +61,16 @@ export function Workspace({ session }: { session: Session }) {
   const navigationAnimation = useRef<Animation | null>(null)
   const navigationClosing = useRef(false)
   const pageTitle = useRef<HTMLHeadingElement>(null)
+  const sideNav = useRef<HTMLElement>(null)
+  const focusPending = useRef(false)
+  const [focusRequest, setFocusRequest] = useState(0)
+  const page = usePageTransition(view)
+  const shown = page.key as View
+  const recordFocus = shown === view ? focusedRecordId : undefined
+  useSlidingIndicator(sideNav, `.nav-item[data-view="${view}"]`)
+  useEffect(() => { window.scrollTo?.({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' }) }, [view])
+  // Focus the heading once the new page is in place and the mobile dialog has closed.
+  useEffect(() => { if (focusPending.current && shown === view && !navigationDialog.current?.open) { focusPending.current = false; window.requestAnimationFrame(() => pageTitle.current?.focus()) } }, [focusRequest, shown, view])
   const [toast, setToast] = useState('')
   const [revision, setRevision] = useState(0)
   const [workspaceError, setWorkspaceError] = useState('')
@@ -175,8 +188,8 @@ export function Workspace({ session }: { session: Session }) {
   function navigate(next: View, recordId?: string) {
     if (navigationClosing.current) return
     setAssistantExplanation(null); setFocusedRecordId(recordId); setView(next)
-    const focusTitle = () => { if (!recordId) window.requestAnimationFrame(() => pageTitle.current?.focus()) }
-    closeNavigation(focusTitle, document.activeElement?.matches(':focus-visible'))
+    focusPending.current = !recordId
+    closeNavigation(() => setFocusRequest(value => value + 1), document.activeElement?.matches(':focus-visible'))
   }
   const activeNav: { id: View; label: string; icon: IconName }[] = [
     { id: 'overview', label: 'Overview', icon: 'home' },
@@ -189,7 +202,8 @@ export function Workspace({ session }: { session: Session }) {
     { id: 'notifications', label: 'Notifications', icon: 'bell' },
     { id: 'assistant', label: 'AI assistant', icon: 'spark' },
   ]
-  const heading = view === 'overview' ? 'Overview' : view === 'work' ? (role === 'lead' ? 'Cohort tasks' : 'My work') : view === 'requirements' ? 'Requirements' : view === 'assistant' ? 'AI assistant' : view[0].toUpperCase()+view.slice(1)
+  const titleOf = (v: View) => v === 'overview' ? 'Overview' : v === 'work' ? (role === 'lead' ? 'Cohort tasks' : 'My work') : v === 'requirements' ? 'Requirements' : v === 'assistant' ? 'AI assistant' : v[0].toUpperCase()+v.slice(1)
+  const heading = titleOf(shown)
   const displayName = profile?.display_name || 'EIF Fellow'
 
   async function signOut() {
@@ -213,11 +227,12 @@ export function Workspace({ session }: { session: Session }) {
     notifications: 'Updates from your fellowship.', assistant: 'Think through your next step with Compass.',
   }
   const sidebarContent = (mobile = false) => <>
-    <div className="brand"><div className="brand-mark"><CompassMark /></div><div><strong>eif compass</strong><span>Innovation Fellowship</span></div></div>
+    <div className="brand"><div className="brand-mark"><CompassLogo size={32} animate/></div><div><strong>eif compass</strong><span>Innovation Fellowship</span></div></div>
     {mobile && <button className="nav-close" aria-label="Close navigation" onClick={event => closeNavigation(undefined, event.detail === 0)}><Icon name="close"/></button>}
     <div className="cohort-identity"><span className="cohort-symbol" aria-hidden="true">EIF</span><div><strong>{cohortName}</strong><span>{role === 'lead' ? 'Fellowship lead' : 'Fellow workspace'}</span></div></div>
-    <nav className="side-nav" aria-label={mobile ? 'Mobile navigation' : 'Main navigation'}>
-      {activeNav.map((item, index) => <div key={item.id}>{[0,4,7].includes(index) && <div className="side-label">{index===0?'Daily work':index===4?'Fellowship':'Tools'}</div>}<button aria-current={view===item.id?'page':undefined} className={`nav-item ${view===item.id?'selected':''}`} onClick={() => navigate(item.id)}><Icon name={item.icon}/><span>{item.label}</span></button></div>)}
+    <nav ref={mobile ? undefined : sideNav} className="side-nav" aria-label={mobile ? 'Mobile navigation' : 'Main navigation'}>
+      {!mobile && <><div className="nav-hover-pill" aria-hidden="true"/><div className="nav-pill" aria-hidden="true"/></>}
+      {activeNav.map((item, index) => <div key={item.id}>{[0,4,7].includes(index) && <div className="side-label">{index===0?'Daily work':index===4?'Fellowship':'Tools'}</div>}<button aria-current={view===item.id?'page':undefined} data-view={item.id} className={`nav-item ${view===item.id?'selected':''}`} onClick={() => navigate(item.id)}><Icon name={item.icon}/><span>{item.label}</span>{!mobile && index < 4 && <kbd aria-hidden="true">G {'OWRC'[index]}</kbd>}</button></div>)}
     </nav>
     <div className="side-spacer"/>
     <details className="account-menu" onKeyDown={event => {if(event.key==='Escape'){event.currentTarget.open=false;event.currentTarget.querySelector('summary')?.focus()}}}>
@@ -231,17 +246,22 @@ export function Workspace({ session }: { session: Session }) {
       <aside className="sidebar">{sidebarContent()}</aside>
       <dialog ref={navigationDialog} className="mobile-navigation" aria-label="Workspace navigation" onCancel={event=>{event.preventDefault();closeNavigation(undefined,true)}} onClick={event=>{if(event.target===event.currentTarget)closeNavigation()}}><div className="mobile-sidebar">{sidebarContent(true)}</div></dialog>
       <main className="main-area" id="workspace-content">
+        <div className="aurora" aria-hidden="true"><i/><i/></div>
         <header className="topbar">
           <button className="mobile-menu-button" aria-label="Open navigation" onClick={event => openNavigation(event.detail === 0)}><Icon name="menu"/></button>
-          <div className="breadcrumb"><span>Workspace</span><span className="crumb-slash">/</span><strong>{heading}</strong></div>
+          <div className="breadcrumb"><span>Workspace</span><span className="crumb-slash">/</span><strong>{titleOf(view)}</strong></div>
           <span className="workspace-context">{profile?.team_name || cohortName}</span>
-        </header>
-        <div className="page-wrap">
-          <div className="page-heading">
-            <div><h1 ref={pageTitle} tabIndex={-1}>{heading}</h1><p>{descriptions[view]}</p></div>
-            {view==='overview' && <button className="text-button refresh-workspace" disabled={loadingData} onClick={() => setRevision(value => value + 1)}>{loadingData?'Refreshing…':'Refresh overview'}</button>}
+          <div className="topbar-tools">
+            <button type="button" className="palette-trigger" aria-label="Search or jump to" aria-keyshortcuts="Control+K" onClick={() => window.dispatchEvent(new Event('eif:palette'))}><Icon name="search" size={14}/><span>Search or jump to…</span><kbd aria-hidden="true">Ctrl K</kbd></button>
+            <ThemeToggle/>
           </div>
-          {supabase && profile?.cohort_id ? view === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={navigate} onExplain={action=>{setAssistantExplanation({question:`Explain why “${action.title}” is my next recommended action, using its recorded reason and deadline. Give a practical first step.`,id:action.id,view:action.view,scope:`${session.user.id}:${role}:${profile.cohort_id}`});setView('assistant')}}/> : view === 'assistant' ? <Assistant key={`${session.user.id}:${role}:${profile.cohort_id}`} client={supabase} userId={session.user.id} role={role} cohortId={profile.cohort_id} onNavigate={navigate} initialExplanation={assistantExplanation?.scope===`${session.user.id}:${role}:${profile.cohort_id}`?assistantExplanation:undefined}/> : view==='calendar'?<><div className="manager-actions calendar-action">{role==='lead'&&<button className="text-button" onClick={()=>setShowEventManager(v=>!v)} aria-expanded={showEventManager}>{showEventManager?'Hide event manager':'Manage events'}</button>}<button className="text-button" onClick={()=>setShowSync(v=>!v)} aria-expanded={showSync}>{showSync?'Hide Google sync':'Sync to Google Calendar'}</button></div><Agenda client={supabase} cohortId={profile.cohort_id} revision={revision}/>{showSync&&<GoogleCalendar client={supabase} cohortId={profile.cohort_id}/ >}{role==='lead'&&showEventManager&&<WorkManager focusedRecordId={focusedRecordId} onFocusConsumed={() => setFocusedRecordId(undefined)} key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>}</>:['projects','feedback','blockers','notifications'].includes(view)?<InternFlows onNavigate={navigate} focusedRecordId={focusedRecordId} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>:<WorkManager focusedRecordId={focusedRecordId} onFocusConsumed={() => setFocusedRecordId(undefined)} key={view} client={supabase} role={role} view={view} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
+        </header>
+        <div className={`page-wrap ${page.className}`}>
+          <div className="page-heading">
+            <div><h1 ref={pageTitle} tabIndex={-1}>{heading}</h1><p>{descriptions[shown]}</p></div>
+            {shown==='overview' && <button className="text-button refresh-workspace" disabled={loadingData} onClick={() => setRevision(value => value + 1)}>{loadingData?'Refreshing…':'Refresh overview'}</button>}
+          </div>
+          {supabase && profile?.cohort_id ? shown === 'overview' ? <Dashboard client={supabase} role={role} userId={session.user.id} cohortId={profile.cohort_id} revision={revision} onNavigate={navigate} onExplain={action=>{setAssistantExplanation({question:`Explain why “${action.title}” is my next recommended action, using its recorded reason and deadline. Give a practical first step.`,id:action.id,view:action.view,scope:`${session.user.id}:${role}:${profile.cohort_id}`});setView('assistant')}}/> : shown === 'assistant' ? <Assistant key={`${session.user.id}:${role}:${profile.cohort_id}`} client={supabase} userId={session.user.id} role={role} cohortId={profile.cohort_id} onNavigate={navigate} initialExplanation={assistantExplanation?.scope===`${session.user.id}:${role}:${profile.cohort_id}`?assistantExplanation:undefined}/> : shown==='calendar'?<><div className="manager-actions calendar-action">{role==='lead'&&<button className="text-button" onClick={()=>setShowEventManager(v=>!v)} aria-expanded={showEventManager}>{showEventManager?'Hide event manager':'Manage events'}</button>}<button className="text-button" onClick={()=>setShowSync(v=>!v)} aria-expanded={showSync}>{showSync?'Hide Google sync':'Sync to Google Calendar'}</button></div><Agenda client={supabase} cohortId={profile.cohort_id} revision={revision}/>{showSync&&<GoogleCalendar client={supabase} cohortId={profile.cohort_id}/ >}{role==='lead'&&showEventManager&&<WorkManager focusedRecordId={recordFocus} onFocusConsumed={() => setFocusedRecordId(undefined)} key={shown} client={supabase} role={role} view={shown} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>}</>:['projects','feedback','blockers','notifications'].includes(shown)?<InternFlows onNavigate={navigate} focusedRecordId={recordFocus} client={supabase} role={role} view={shown} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/>:<WorkManager focusedRecordId={recordFocus} onFocusConsumed={() => setFocusedRecordId(undefined)} key={shown} client={supabase} role={role} view={shown} userId={session.user.id} cohortId={profile.cohort_id} onChanged={() => setRevision(v => v + 1)}/> : <section className="panel" role="alert">Your account has no cohort assigned. Contact your fellowship lead.</section>}
 
           <footer className="page-footer"><span>EIF COMPASS <span className="footer-sep">·</span> {cohortName}</span><span>Small steps, meaningful progress.</span></footer>
         </div>
@@ -254,5 +274,3 @@ export function Workspace({ session }: { session: Session }) {
 }
 
 function initials(name: string) { return name.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase() }
-
-function CompassMark() { return <img src="/compass-mark.svg" width="32" height="32" className="compass-svg" alt="" aria-hidden="true"/> }

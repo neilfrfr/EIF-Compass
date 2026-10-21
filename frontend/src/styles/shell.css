@@ -61,6 +61,56 @@
   height: 32px;
 }
 
+/* Logo: the arc draws, the needle swings, overshoots and settles; it swings again on hover. */
+.compass-animate {
+  animation: logo-pop 0.7s var(--ease-out) both;
+}
+
+.compass-animate .arc {
+  stroke-dasharray: 90;
+  stroke-dashoffset: 90;
+  animation: logo-draw 1.1s var(--ease-out) 0.15s forwards;
+}
+
+.compass-animate .needle {
+  transform-origin: 32px 32px;
+  animation: needle-settle 1.6s cubic-bezier(.34,1.56,.64,1) 0.2s both;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* A second animation in the list restarts on hover without replaying the first on leave. */
+  .brand:hover .compass-animate .needle {
+    animation: needle-settle 1.6s cubic-bezier(.34,1.56,.64,1) 0.2s both, needle-swing 1.2s cubic-bezier(.34,1.56,.64,1);
+  }
+}
+
+@keyframes logo-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
+@keyframes logo-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes needle-settle {
+  0% { transform: rotate(-120deg); }
+  60% { transform: rotate(14deg); }
+  80% { transform: rotate(-5deg); }
+  100% { transform: rotate(0); }
+}
+
+@keyframes needle-swing {
+  0% { transform: rotate(-120deg); }
+  60% { transform: rotate(14deg); }
+  80% { transform: rotate(-5deg); }
+  100% { transform: rotate(0); }
+}
+
 .brand > div:last-child {
   min-width: 0;
 }
@@ -95,7 +145,7 @@
   place-items: center;
   width: 30px;
   height: 30px;
-  border-radius: 7px;
+  border-radius: var(--r-btn);
   box-shadow: inset 0 0 0 1px var(--sideline);
   color: var(--sidemuted);
   font-size: 10px;
@@ -129,11 +179,38 @@
 }
 
 .side-nav {
+  position: relative;
   display: grid;
   gap: 1px;
 }
 
+/* One selected pill slides between items; a faint hover pill follows the pointer. Placed by useSlidingIndicator. */
+.nav-pill,
+.nav-hover-pill {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 32px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.nav-pill {
+  background: var(--sel);
+  transition: transform 0.38s var(--ease-out), opacity 0.2s;
+}
+
+.nav-hover-pill {
+  display: none;
+  background: var(--sidehover);
+  opacity: 0;
+  transition: transform 0.25s var(--ease-out), opacity 0.2s;
+}
+
 .nav-item {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -154,6 +231,13 @@
   height: 16px;
 }
 
+.nav-item kbd {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  opacity: 0.55;
+}
+
 .nav-item span {
   min-width: 0;
   overflow: hidden;
@@ -167,10 +251,22 @@
   font-weight: 510;
 }
 
+.sidebar .nav-item.selected {
+  background: transparent;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .nav-item:hover:not(.selected) {
     background: var(--sidehover);
     color: var(--sideink);
+  }
+
+  .sidebar .nav-item:hover:not(.selected) {
+    background: transparent;
+  }
+
+  .nav-hover-pill {
+    display: block;
   }
 }
 
@@ -249,7 +345,7 @@
   left: 0;
   z-index: 6;
   padding: 6px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: var(--surface);
   color: var(--ink);
   box-shadow: 0 0 0 1px var(--line), var(--shadow-pop);
@@ -366,6 +462,7 @@ body:has(.mobile-navigation[open]) {
 
 /* Main area */
 .main-area {
+  position: relative;
   min-height: calc(100dvh - 20px);
   margin-left: 244px;
   overflow: clip;
@@ -393,7 +490,47 @@ body:has(.mobile-navigation[open]) {
   display: none;
 }
 
+/* Ambient aurora behind the top of the main area */
+.aurora {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 420px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aurora i {
+  position: absolute;
+  width: 520px;
+  height: 320px;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.55;
+  animation: aurora-drift 18s ease-in-out infinite alternate;
+}
+
+.aurora i:nth-child(1) {
+  top: -140px;
+  right: -80px;
+  background: var(--glow);
+}
+
+.aurora i:nth-child(2) {
+  top: -200px;
+  right: 260px;
+  background: var(--aurora);
+  animation-duration: 24s;
+  animation-direction: alternate-reverse;
+}
+
+@keyframes aurora-drift {
+  to {
+    transform: translate(-120px, 60px) scale(1.15);
+  }
+}
+
 .breadcrumb {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -424,7 +561,44 @@ body:has(.mobile-navigation[open]) {
   white-space: nowrap;
 }
 
+.topbar-tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.palette-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  min-height: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-btn);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.palette-trigger kbd {
+  padding: 1px 5px;
+  border-radius: var(--r-badge);
+  background: var(--surface2);
+  font-size: 10px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .palette-trigger:hover {
+    box-shadow: inset 0 0 0 1px var(--muted);
+    color: var(--ink);
+  }
+}
+
 .page-wrap {
+  position: relative;
   max-width: 1120px;
   margin: 0 auto;
   padding: 36px 32px 28px;
@@ -484,6 +658,45 @@ body:has(.mobile-navigation[open]) {
   opacity: 0.6;
 }
 
+/* Page switch: the old page lifts away, then sections rise in with a stagger. Never the theme circle. */
+/* An animation, not a transition: swapping off `rise` would otherwise jump straight to the end state. */
+.page-leaving > * {
+  animation: lift 0.16s ease both;
+}
+
+@keyframes lift {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+    filter: blur(4px);
+  }
+}
+
+.page-entering > * {
+  animation: rise 0.7s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 80ms);
+}
+
+.page-entering > :nth-child(2) { --i: 1; }
+.page-entering > :nth-child(3) { --i: 2; }
+.page-entering > :nth-child(4) { --i: 3; }
+.page-entering > :nth-child(5) { --i: 4; }
+.page-entering > :nth-child(6) { --i: 5; }
+.page-entering > :nth-child(n+7) { --i: 6; }
+
+/* A transform or filter would trap the fixed detail drawer opened on arrival. */
+.page-entering > :has(.detail-overlay) {
+  animation: none;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(6px);
+  }
+}
+
 /* Toast */
 .toast {
   position: fixed;
@@ -495,7 +708,7 @@ body:has(.mobile-navigation[open]) {
   gap: 12px;
   max-width: calc(100vw - 32px);
   padding: 10px 14px;
-  border-radius: 9px;
+  border-radius: var(--r-card);
   background: var(--strong);
   color: var(--canvas);
   font-size: 12px;
@@ -511,7 +724,7 @@ body:has(.mobile-navigation[open]) {
   }
 }
 
-/* Theme toggle pill (mounted in later tasks) */
+/* Theme toggle pill (top bar and sign-in) */
 .theme-toggle {
   position: relative;
   display: flex;
@@ -697,7 +910,8 @@ body:has(.mobile-navigation[open]) {
 
 @media (pointer: coarse) {
   .account-options button,
-  .mobile-menu-button {
+  .mobile-menu-button,
+  .palette-trigger {
     min-height: 44px;
   }
 
@@ -735,6 +949,18 @@ body:has(.mobile-navigation[open]) {
     display: none;
   }
 
+  .palette-trigger {
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .palette-trigger span,
+  .palette-trigger kbd {
+    display: none;
+  }
+
   .page-wrap {
     padding: 22px 16px;
   }
@@ -765,6 +991,12 @@ body:has(.mobile-navigation[open]) {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .aurora {
+    display: none;
+  }
+}
+
 @media (forced-colors: active) {
   .topbar {
     background: Canvas;
@@ -779,6 +1011,12 @@ body:has(.mobile-navigation[open]) {
 
   .nav-item.selected {
     outline: 2px solid Highlight;
+  }
+
+  .nav-pill,
+  .nav-hover-pill,
+  .aurora {
+    display: none;
   }
 
   .theme-toggle {
