@@ -13,6 +13,10 @@ import Agenda from './Agenda'
 import InternFlows from './InternFlows'
 import ThemeToggle from './ThemeToggle'
 import CompassLogo from './CompassLogo'
+import CommandPalette from './CommandPalette'
+import type { PaletteItem } from './CommandPalette'
+import { createGoShortcut } from './shortcuts'
+import { toggleTheme } from './theme'
 import {reducedMotion,usePageTransition,useSlidingIndicator} from './motion'
 
 type IconName = 'home' | 'tasks' | 'check' | 'calendar' | 'bell' | 'search' | 'chevron' | 'arrow' | 'clock' | 'spark' | 'trend' | 'users' | 'flag' | 'plus' | 'dots' | 'lock' | 'close' | 'feedback' | 'blocker' | 'menu'
@@ -202,6 +206,20 @@ export function Workspace({ session }: { session: Session }) {
     { id: 'notifications', label: 'Notifications', icon: 'bell' },
     { id: 'assistant', label: 'AI assistant', icon: 'spark' },
   ]
+  const latestNavigate = useRef(navigate)
+  latestNavigate.current = navigate
+  useEffect(() => {
+    const handler = createGoShortcut({ o: 'overview', w: 'work', r: 'requirements', c: 'calendar' }, v => latestNavigate.current(v))
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+  const has = (id: View) => activeNav.some(item => item.id === id)
+  const paletteItems: PaletteItem[] = [
+    ...activeNav.map((item, index) => ({ label: `Go to ${item.label}`, hint: index < 4 ? `G ${'OWRC'[index]}` : undefined, run: () => navigate(item.id) })),
+    { label: 'Toggle dark mode', run: () => toggleTheme() },
+    ...(has('blockers') ? [{ label: 'Report a blocker', run: () => navigate('blockers') }] : []),
+    ...(has('assistant') ? [{ label: 'Ask the AI assistant', run: () => navigate('assistant') }] : []),
+  ]
   const titleOf = (v: View) => v === 'overview' ? 'Overview' : v === 'work' ? (role === 'lead' ? 'Cohort tasks' : 'My work') : v === 'requirements' ? 'Requirements' : v === 'assistant' ? 'AI assistant' : v[0].toUpperCase()+v.slice(1)
   const heading = titleOf(shown)
   const displayName = profile?.display_name || 'EIF Fellow'
@@ -267,6 +285,7 @@ export function Workspace({ session }: { session: Session }) {
         </div>
       </main>
 
+      <CommandPalette items={paletteItems}/>
       {toast && <div className="toast" role="status">{toast}</div>}
 
     </div>
