@@ -11,7 +11,7 @@ const at = (hours: number) => new Date(Date.now() + hours * 3600000).toISOString
 
 const COHORT = 'cohort', TEAM = 'team', PROJECT = 'project', SPRINT = 'sprint', MILESTONE = 'milestone'
 const LONG_TITLE = 'DEMO · Reconcile the fellowship resource catalogue across all partner teams now!'
-const LONG_NAME = 'Maria Cristina Dela Cruz-Villanueva Jr.'
+const LONG_NAME = 'Maria Cristina Dela Cruz-Villanueva, Jr.'
 export const FIXTURE_IDS = {intern: 'a', lead: 'l'}
 
 function seed(): Record<string, Row[]> {
