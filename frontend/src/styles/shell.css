@@ -695,7 +695,22 @@ body:has(.mobile-navigation[open]) {
   }
 }
 
+@media (pointer: coarse) {
+  .account-options button,
+  .mobile-menu-button {
+    min-height: 44px;
+  }
+
+  .mobile-menu-button {
+    width: 44px;
+  }
+}
+
 @media (max-width: 767px) {
+  .account-options button {
+    min-height: 44px;
+  }
+
   .app-shell {
     padding: 0;
     background: var(--canvas);
