@@ -19,6 +19,8 @@
   overflow: hidden;
   background: var(--story);
   color: var(--storyink);
+  /* The journey SVG in AuthGate.tsx fills its hollow nodes with this; Task 11 retires it. */
+  --brand-deep: var(--story);
 }
 
 .studio-login-story::before {

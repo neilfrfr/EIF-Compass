@@ -3,8 +3,8 @@ import {readFileSync,readdirSync} from 'node:fs'
 import {join,relative} from 'node:path'
 
 const src='src'
-// Temporary: not yet migrated to tokens. Task 4 removes these from the allowlist.
-const allow=new Set(['styles/tokens.css','styles.css','brand.css','interaction-effects.css','assistant.css'])
+// tokens.css is the one stylesheet allowed to hold raw colours.
+const allow=new Set(['styles/tokens.css'])
 const walk=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(dir,e.name)):[join(dir,e.name)])
 const files=walk(src).filter(f=>f.endsWith('.css')).map(f=>relative(src,f).replaceAll('\\','/')).filter(f=>!allow.has(f))
 assert.ok(files.length>0,'found stylesheets to check')

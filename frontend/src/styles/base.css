@@ -1,4 +1,6 @@
 /* Deep Lagoon base: reset, typography, shared controls and primitives. Colours come from tokens.css only. */
+/* Tailwind stays for its preflight reset and the sr-only utility used in WorkManager.tsx. */
+@import "tailwindcss";
 
 *,
 *::before,
@@ -8,6 +10,7 @@
 
 html {
   background: var(--canvas);
+  accent-color: var(--accent);
   scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
 }
 
