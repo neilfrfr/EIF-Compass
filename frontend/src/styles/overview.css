@@ -740,8 +740,14 @@ progress::-moz-progress-bar {
   .dashboard-next-action {
     flex-direction: column;
     align-items: stretch;
+    flex-wrap: nowrap;
     gap: 16px;
     padding: 20px;
+  }
+
+  /* In a column, the desktop flex bases would wrap the explanation into an off-screen second column. */
+  .dashboard-next-action > * {
+    flex: none;
   }
 
   .dashboard-next-action h3 {
@@ -749,7 +755,8 @@ progress::-moz-progress-bar {
   }
 
   .next-action-controls {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    /* Fixed tracks: auto-fit sizes the card's height for one column, stretching both buttons to 94px. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .dashboard-metrics article {
