@@ -1,9 +1,37 @@
-/* Deep Lagoon Overview: intern and lead dashboards. Motion (stagger, count-up, spotlight) arrives in later tasks. */
+/* Deep Lagoon Overview: intern and lead dashboards, with arrival stagger, spotlight, inline explanation and status badges. */
 
 .role-dashboard {
   display: grid;
   gap: 16px;
   min-width: 0;
+}
+
+/* Arrival: the dashboard staggers its own sections once per mount (Dashboard clears the class), so the page-level rise is skipped. */
+.page-entering > .role-dashboard {
+  animation: none;
+}
+
+.dashboard-arrive > * {
+  animation: rise 0.7s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 80ms);
+}
+
+.dashboard-arrive > :nth-child(2) { --i: 1; }
+.dashboard-arrive > :nth-child(3) { --i: 2; }
+.dashboard-arrive > :nth-child(4) { --i: 3; }
+.dashboard-arrive > :nth-child(5) { --i: 4; }
+.dashboard-arrive > :nth-child(6) { --i: 5; }
+.dashboard-arrive > :nth-child(n+7) { --i: 6; }
+
+/* Progress bars fill from 0 on arrival. */
+.dashboard-arrive progress {
+  animation: bar-fill 0.9s var(--ease-out) 0.3s both;
+}
+
+@keyframes bar-fill {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
 }
 
 /* Welcome + fellowship journey */
@@ -65,7 +93,7 @@ progress {
   height: 5px;
   overflow: hidden;
   border: 0;
-  border-radius: 9px;
+  border-radius: 99px;
   background: var(--line);
   accent-color: var(--accent);
   -webkit-appearance: none;
@@ -73,17 +101,17 @@ progress {
 }
 
 progress::-webkit-progress-bar {
-  border-radius: 9px;
+  border-radius: 99px;
   background: var(--line);
 }
 
 progress::-webkit-progress-value {
-  border-radius: 9px;
+  border-radius: 99px;
   background: var(--progress-fill);
 }
 
 progress::-moz-progress-bar {
-  border-radius: 9px;
+  border-radius: 99px;
   background: var(--progress-fill);
 }
 
@@ -97,7 +125,8 @@ progress::-moz-progress-bar {
   gap: 24px;
   padding: 24px 26px;
   overflow: hidden;
-  border-radius: 14px;
+  flex-wrap: wrap;
+  border-radius: var(--r-card);
   background: var(--nbabg);
   box-shadow: inset 0 0 0 1px var(--nbaline);
 }
@@ -111,8 +140,129 @@ progress::-moz-progress-bar {
   pointer-events: none;
 }
 
+/* Spotlight ring: a hairline that lights up near the cursor (Dashboard sets --mx/--my on fine pointers). */
+.dashboard-next-action::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  padding: 1px;
+  border-radius: inherit;
+  background: radial-gradient(160px circle at var(--mx, 70%) var(--my, 0%), var(--accent), transparent 70%);
+  -webkit-mask: linear-gradient(var(--canvas) 0 0) content-box, linear-gradient(var(--canvas) 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(var(--canvas) 0 0) content-box exclude, linear-gradient(var(--canvas) 0 0);
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out);
+  pointer-events: none;
+}
+
 .dashboard-next-action > div:first-child {
+  flex: 1 1 0;
   min-width: 0;
+}
+
+.nba-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+  padding: 2px 9px;
+  border-radius: 99px;
+  background: var(--chip);
+  color: var(--accenttext);
+  font-size: 11px;
+  font-weight: 510;
+}
+
+.nba-chip span {
+  display: inline-block;
+  animation: twinkle 3.2s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8) rotate(20deg);
+  }
+}
+
+/* Inline "Explain this": expands below the card's content. */
+.explain-inline,
+.expand {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: expand 0.4s var(--ease-out);
+}
+
+.explain-inline {
+  flex: 1 1 100%;
+}
+
+.explain-inline > *,
+.expand > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@keyframes expand {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+.explain-body {
+  padding-top: 16px;
+  border-top: 1px solid var(--nbaline);
+}
+
+.dashboard-next-action .explain-answer {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.explain-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: var(--accent);
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.explain-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+.explain-note {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.explain-note.is-warning {
+  color: var(--amber);
+  font-weight: 510;
+}
+
+.dashboard-next-action .explain-error {
+  margin-top: 6px;
+  color: var(--red);
+  font-size: 12px;
 }
 
 .dashboard-next-action h3 {
@@ -155,6 +305,10 @@ progress::-moz-progress-bar {
   .dashboard-quick-actions .text-button:hover {
     background: var(--surface);
     box-shadow: inset 0 0 0 1px var(--muted);
+  }
+
+  .dashboard-next-action:hover::before {
+    opacity: 1;
   }
 }
 
@@ -250,7 +404,7 @@ progress::-moz-progress-bar {
   min-height: 32px;
   padding: 4px 8px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--r-btn);
   background: transparent;
   color: var(--accenttext);
   font-size: 12px;
@@ -270,7 +424,7 @@ progress::-moz-progress-bar {
   gap: 12px;
   margin: 0 -8px;
   padding: 10px 8px;
-  border-radius: 7px;
+  border-radius: var(--r-btn);
 }
 
 .dashboard-line > div {
@@ -308,8 +462,9 @@ progress::-moz-progress-bar {
   transform: none;
 }
 
-/* Badges (dashboard rows show the status as text) */
-.dashboard-badge {
+/* Status badges always pair an icon with text; event tags share the shape. */
+.status-badge,
+.event-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -324,9 +479,41 @@ progress::-moz-progress-bar {
   white-space: nowrap;
 }
 
-.dashboard-badge.warning {
+.status-badge svg {
+  flex: none;
+}
+
+.intern-detail .status-badge,
+.dashboard-panel p .status-badge {
+  margin: 0 4px;
+  vertical-align: 1px;
+}
+
+.status-badge.is-pending,
+.status-badge.is-to_do {
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+.status-badge.is-open {
   background: var(--amberbg);
   color: var(--amber);
+}
+
+.status-badge.is-overdue {
+  background: var(--redbg);
+  color: var(--red);
+}
+
+.status-badge.is-overdue svg {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  50% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
 }
 
 /* Lead: team progress, drill-down and table */
@@ -365,10 +552,13 @@ progress::-moz-progress-bar {
   margin-left: -8px;
 }
 
-.intern-detail {
+.expand {
   margin-top: 12px;
+}
+
+.intern-detail {
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--r-btn);
   background: var(--surface2);
   color: var(--ink);
 }
@@ -385,10 +575,26 @@ progress::-moz-progress-bar {
 }
 
 .dashboard-table-scroll {
+  position: relative;
   overflow-x: auto;
 }
 
+/* One shared hover highlight glides between table rows (fine pointers only). */
+.row-glide {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  border-radius: var(--r-btn);
+  background: var(--hover);
+  opacity: 0;
+  transition: transform 0.25s var(--ease-out), opacity 0.2s var(--ease-out);
+  pointer-events: none;
+}
+
 .dashboard-table {
+  position: relative;
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
@@ -426,7 +632,7 @@ progress::-moz-progress-bar {
 .dashboard-events article {
   min-width: 0;
   padding: 14px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: var(--surface2);
 }
 
@@ -448,9 +654,12 @@ progress::-moz-progress-bar {
     background: var(--hover);
   }
 
-  .dashboard-line:hover,
-  .dashboard-table tbody tr:hover {
+  .dashboard-line:hover {
     background: var(--hover);
+  }
+
+  .row-glide {
+    display: block;
   }
 
   .dashboard-panel .record-link:hover {
@@ -537,16 +746,6 @@ progress::-moz-progress-bar {
     flex: 1 1 160px;
   }
 
-  .dashboard-panel button {
-    min-height: 44px;
-  }
-
-  .dashboard-panel .record-link {
-    display: inline-block;
-    min-height: 44px;
-    padding: 11px 0;
-  }
-
   .dashboard-events {
     grid-template-columns: 1fr;
   }
@@ -557,10 +756,24 @@ progress::-moz-progress-bar {
   }
 }
 
+/* Touch targets: 44px on small screens and coarse pointers. */
+@media (max-width: 767px), (pointer: coarse) {
+  .dashboard-panel button {
+    min-height: 44px;
+  }
+
+  .dashboard-panel .record-link {
+    display: inline-block;
+    min-height: 44px;
+    padding: 11px 0;
+  }
+}
+
 @media (forced-colors: active) {
   .dashboard-next-action,
   .dashboard-metrics,
-  .dashboard-badge,
+  .status-badge,
+  .event-tag,
   .dashboard-events article {
     border: 1px solid CanvasText;
   }

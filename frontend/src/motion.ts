@@ -50,7 +50,7 @@ export function useSlidingIndicator(container:RefObject<HTMLElement|null>,active
   },[container,activeSelector])
 }
 
-function placePill(item:HTMLElement|null,pill:HTMLElement|null){
+export function placePill(item:HTMLElement|null,pill:HTMLElement|null){
   if(!pill)return
   pill.style.opacity=item?'1':'0'
   if(item){pill.style.transform=`translateY(${item.offsetTop}px)`;pill.style.height=`${item.offsetHeight}px`}

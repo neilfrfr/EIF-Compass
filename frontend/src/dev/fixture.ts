@@ -152,6 +152,9 @@ export function createFixtureClient(role: Role): SupabaseClient {
 
 const json = (body: unknown, init: ResponseInit = {}) => new Response(JSON.stringify(body), {...init, headers: {'Content-Type': 'application/json'}})
 
+// Saved turns live for the page session, so an answer from Overview shows up on the Assistant page.
+const savedTurns: Row[] = []
+
 function assistantStream(body: Row, signal?: AbortSignal | null) {
   const answer = 'Your nearest deadline is "DEMO · Finalize prototype navigation", due tomorrow. Start there: open the Work page, move the task to In progress, and wire the remaining screens into the clickable flow. Then check Mentor check-in notes, which is due within 24 hours. Your open blocker, Design asset access, already has a lead comment, so follow up there if you are still stuck.'
   const words = answer.split(' '), size = Math.ceil(words.length / 30)
@@ -168,7 +171,7 @@ function assistantStream(body: Row, signal?: AbortSignal | null) {
       const send = (event: unknown) => controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'))
       const step = () => {
         if (signal?.aborted) return
-        if (i < chunks.length) { send({type: 'delta', text: chunks[i++]}); timer = setTimeout(step, 40) } else { send({type: 'complete', result}); controller.close() }
+        if (i < chunks.length) { send({type: 'delta', text: chunks[i++]}); timer = setTimeout(step, 40) } else { savedTurns.push(turn); send({type: 'complete', result}); controller.close() }
       }
       signal?.addEventListener('abort', () => { clearTimeout(timer); try { controller.error(new DOMException('Aborted', 'AbortError')) } catch { /* already closed */ } })
       step()
@@ -184,10 +187,12 @@ export function installFixtureFetch(): void {
     if (url.origin !== window.location.origin || !url.pathname.startsWith('/api/')) return real(input, init)
     const method = (init?.method || 'GET').toUpperCase()
     if (url.pathname === '/api/assistant/history') {
-      const conversation = {id: 'conv', generation: 1, revision: 0}
-      if (method === 'GET') return json({conversation, turns: [], has_more: false, next_before: null})
+      const conversation = {id: 'conv', generation: 1, revision: savedTurns.length}
+      if (method === 'GET') return json({conversation, turns: savedTurns, has_more: false, next_before: null})
       const body = init?.body ? JSON.parse(String(init.body)) : {}
-      return json({conversation: {...conversation, revision: (body.revision ?? 0) + 1}, turn: {requestId: body.requestId, question: body.question, answer: body.answer, generatedAt: body.generatedAt, truncated: false, sourceRefs: [], sources: []}})
+      const turn = {requestId: body.requestId, question: body.question, answer: body.answer, generatedAt: body.generatedAt, truncated: false, sourceRefs: [], sources: []}
+      savedTurns.push(turn)
+      return json({conversation: {...conversation, revision: savedTurns.length}, turn})
     }
     if (url.pathname === '/api/assistant') return assistantStream(init?.body ? JSON.parse(String(init.body)) : {}, init?.signal)
     return json({})
