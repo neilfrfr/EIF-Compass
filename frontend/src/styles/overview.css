@@ -584,13 +584,18 @@ progress::-moz-progress-bar {
   overflow-x: auto;
 }
 
-/* One shared hover highlight glides between table rows (fine pointers only). */
+/* One shared hover highlight glides between list rows (useRowGlide; fine pointers only). It sits under the rows' content. */
+:has(> .row-glide) {
+  position: relative;
+  isolation: isolate;
+}
+
 .row-glide {
   display: none;
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
+  z-index: -1;
   border-radius: var(--r-btn);
   background: var(--hover);
   opacity: 0;
@@ -671,6 +676,18 @@ progress::-moz-progress-bar {
     background: transparent;
     text-decoration: underline;
     text-decoration-color: var(--muted);
+  }
+}
+
+/* useRowGlide stays out under reduced motion, so glided rows get a static hover instead. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  .dashboard-table tbody tr:hover,
+  .work-row:hover,
+  .submission-list > div:hover,
+  .intern-flows > .flow-card:hover,
+  .agenda-list article:hover,
+  .calendar-selection label:hover {
+    background: var(--hover);
   }
 }
 

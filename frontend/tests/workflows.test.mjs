@@ -5,8 +5,8 @@ import React, {act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {JSDOM} from 'jsdom'
 mkdirSync('.test-output',{recursive:true})
-for(const name of ['WorkManager','SubmissionBin','submissions','DetailDrawer']) {
- try { writeFileSync(`.test-output/${name}.js`,ts.transpileModule(readFileSync(`src/${name}.${name==='submissions'?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replaceAll("'./SubmissionBin'","'./SubmissionBin.js'").replaceAll("'./submissions'","'./submissions.js'").replaceAll("'./DetailDrawer'","'./DetailDrawer.js'")) } catch(error) { if(name==='WorkManager') throw error }
+for(const name of ['WorkManager','SubmissionBin','submissions','DetailDrawer','motion','StatusBadge']) {
+ try { writeFileSync(`.test-output/${name}.js`,ts.transpileModule(readFileSync(`src/${name}.${['submissions','motion'].includes(name)?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replaceAll("'./SubmissionBin'","'./SubmissionBin.js'").replaceAll("'./submissions'","'./submissions.js'").replaceAll("'./DetailDrawer'","'./DetailDrawer.js'").replaceAll("'./motion'","'./motion.js'").replaceAll("'./StatusBadge'","'./StatusBadge.js'")) } catch(error) { if(name==='WorkManager') throw error }
 }
 const {default:WorkManager}=await import('../.test-output/WorkManager.js')
 const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'})
@@ -87,12 +87,34 @@ assert.ok(select)
 await act(async()=>{select.value='completed';select.dispatchEvent(new window.Event('change',{bubbles:true}))})
 assert.deepEqual(calls.at(-1).payload,{status:'completed'})
 assert.ok(calls.at(-1).filters.some(([k,v])=>k==='assignee_id'&&v==='intern-a'))
-await render('lead','work');await click('Edit')
+// Completing under a filter that hides completed work keeps the row for the ~600ms completion animation
+const statusFilter=()=>document.querySelectorAll('.work-filters select')[3]
+await act(async()=>{statusFilter().value='to_do';statusFilter().dispatchEvent(new window.Event('change',{bubbles:true}))})
+const original=fixtures.tasks[0];fixtures.tasks[0]={...original,status:'completed'}
+await act(async()=>{const s=document.querySelector('[aria-label="Status for Assigned task"]');s.value='completed';s.dispatchEvent(new window.Event('change',{bubbles:true}))})
+assert.match(document.body.textContent,/Task status saved\./,'Existing toast text is unchanged')
+const completing=[...document.querySelectorAll('article')].find(e=>e.textContent.includes('Assigned task'))
+assert.ok(completing?.classList.contains('is-completing'),'Completed row stays with .is-completing while the filter would hide it')
+await act(async()=>new Promise(r=>setTimeout(r,650)))
+assert.ok(![...document.querySelectorAll('article')].some(e=>e.textContent.includes('Assigned task')),'Row leaves once the animation ends')
+fixtures.tasks[0]=original
+await act(async()=>{statusFilter().value='all';statusFilter().dispatchEvent(new window.Event('change',{bubbles:true}))})
+await render('lead','work')
+const statusTexts=new Set(['To do','In progress','For review','Completed','Pending','Under review','In review','Overdue','Upcoming'])
+const badges=[...document.querySelectorAll('.status-badge')]
+assert.ok(badges.length>0,'Task statuses render as badges')
+for(const badge of badges){assert.ok(badge.querySelector('svg'),'Status badge has an icon');assert.ok(statusTexts.has(badge.textContent.trim()),`Status badge has text: ${badge.textContent}`)}
+assert.ok(![...document.querySelectorAll('.data-pill')].some(pill=>statusTexts.has(pill.textContent.trim())),'No status is shown without an icon')
+await click('Edit')
 assert.equal(document.querySelector('[name="title"]').value,'Assigned task')
 document.querySelector('[name="title"]').value='Edited from form';await submit()
 assert.equal(calls.at(-1).op,'update');assert.equal(calls.at(-1).payload.title,'Edited from form')
 fixtures.requirement_submissions=[{requirement_id:'req-a',user_id:'intern-a',submission_url:'https://example.com/reflection',status:'in_review',reviewed_at:null}]
-await render('lead','requirements');await click('Review submissions');await click('Approve');await click('Close')
+await render('intern','requirements')
+assert.ok(document.querySelector('.work-row .status-badge svg'),'Intern requirement status is an icon badge')
+await render('lead','requirements');await click('Review submissions')
+assert.ok(document.querySelector('.submission-bin .status-badge svg'),'Submission status is an icon badge')
+await click('Approve');await click('Close')
 assert.deepEqual(calls.at(-1).payload,{status:'completed'})
 assert.ok(calls.at(-1).filters.some(([k,v])=>k==='user_id'&&v==='intern-a'))
 fixtures.requirement_submissions.push({requirement_id:'req-a',user_id:'intern-b',status:'in_review'})

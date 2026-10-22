@@ -53,7 +53,50 @@ export function useSlidingIndicator(container:RefObject<HTMLElement|null>,active
 export function placePill(item:HTMLElement|null,pill:HTMLElement|null){
   if(!pill)return
   pill.style.opacity=item?'1':'0'
-  if(item){pill.style.transform=`translateY(${item.offsetTop}px)`;pill.style.height=`${item.offsetHeight}px`}
+  if(item){pill.style.transform=`translate(${item.offsetLeft}px,${item.offsetTop}px)`;pill.style.width=`${item.offsetWidth}px`;pill.style.height=`${item.offsetHeight}px`}
+}
+
+/** Inserts one `.row-glide` into the list and slides it to the hovered row. CSS shows it on fine pointers only; absent under reduced motion. */
+export function useRowGlide(listRef:RefObject<HTMLElement|null>,rowSelector:string):void{
+  const bound=useRef<{list:HTMLElement;off:()=>void}|null>(null)
+  // No deps: the list may mount later (after loading, or inside a drawer), so rebind whenever the element changes.
+  useEffect(()=>{
+    const list=listRef.current
+    if(bound.current?.list===list)return
+    bound.current?.off();bound.current=null
+    if(!list||reducedMotion())return
+    const glide=document.createElement('span')
+    glide.className='row-glide';glide.setAttribute('aria-hidden','true')
+    list.prepend(glide)
+    const place=(row:Element|null)=>{
+      glide.style.opacity=row?'1':'0'
+      if(!row)return
+      const r=row.getBoundingClientRect(),l=list.getBoundingClientRect()
+      glide.style.transform=`translate(${r.left-l.left-list.clientLeft+list.scrollLeft}px,${r.top-l.top-list.clientTop+list.scrollTop}px)`
+      glide.style.width=`${r.width}px`;glide.style.height=`${r.height}px`
+    }
+    const over=(event:Event)=>{const row=(event.target as Element).closest?.(rowSelector);place(row&&list.contains(row)?row:null)}
+    const leave=()=>place(null)
+    list.addEventListener('pointerover',over);list.addEventListener('pointerleave',leave)
+    bound.current={list,off:()=>{list.removeEventListener('pointerover',over);list.removeEventListener('pointerleave',leave);glide.remove()}}
+  })
+  useEffect(()=>()=>{bound.current?.off();bound.current=null},[])
+}
+
+/** Marks an id as completing for 600ms so its row can play the check + strike animation. No-op under reduced motion. */
+export function useCompletionFlash():{flash(id:string):void;isFlashing(id:string):boolean}{
+  const [ids,setIds]=useState<string[]>([])
+  const timers=useRef(new Map<string,number>())
+  useEffect(()=>()=>{timers.current.forEach(timer=>window.clearTimeout(timer));timers.current.clear()},[])
+  return {
+    flash(id){
+      if(reducedMotion())return
+      window.clearTimeout(timers.current.get(id))
+      timers.current.set(id,window.setTimeout(()=>{timers.current.delete(id);setIds(current=>current.filter(x=>x!==id))},600))
+      setIds(current=>current.includes(id)?current:[...current,id])
+    },
+    isFlashing:id=>ids.includes(id),
+  }
 }
 
 /** Last arrival delay (6 x 70ms + 80ms) plus the 700ms rise. */

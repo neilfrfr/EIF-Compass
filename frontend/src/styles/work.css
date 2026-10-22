@@ -248,7 +248,7 @@
   border-radius: var(--r-btn);
 }
 
-.manager-list > .work-row:first-child {
+.manager-list > .work-row:first-of-type {
   border-top-color: transparent;
 }
 
@@ -295,6 +295,95 @@
   line-height: 1.45;
   text-align: left;
   overflow-wrap: anywhere;
+}
+
+/* Completing a task (useCompletionFlash, 600ms): a check draws in and a strike sweeps the title, then both fade so nothing pops when the class drops. */
+.manager-record-heading {
+  position: relative;
+}
+
+.complete-check {
+  position: absolute;
+  top: 50%;
+  left: -20px;
+  margin-top: -7px;
+  color: var(--accent);
+  animation: check-draw 0.6s var(--ease-out) both;
+}
+
+.work-row.is-completing .record-open {
+  position: relative;
+}
+
+.work-row.is-completing .record-open::after {
+  content: "";
+  position: absolute;
+  top: 55%;
+  right: 6px;
+  left: 6px;
+  height: 1px;
+  background: currentColor;
+  transform-origin: left;
+  animation: strike-sweep 0.6s var(--ease-out) both;
+}
+
+/* The filter no longer matches: slip away just before the row unmounts. */
+.work-row.is-leaving {
+  animation: row-leave 0.2s var(--ease-out) 0.35s both;
+}
+
+@keyframes check-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  50%,
+  85% {
+    clip-path: inset(0);
+    opacity: 1;
+  }
+
+  to {
+    clip-path: inset(0);
+    opacity: 0;
+  }
+}
+
+@keyframes strike-sweep {
+  from {
+    transform: scaleX(0);
+  }
+
+  55%,
+  85% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+
+  to {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+@keyframes row-leave {
+  to {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+/* A changed review state swaps in its new badge */
+.badge-swap {
+  display: inline-flex;
+  animation: badge-swap 0.24s var(--ease-out);
+}
+
+@keyframes badge-swap {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
 }
 
 .record-status {
@@ -379,17 +468,27 @@
   }
 }
 
-/* Detail drawer */
+/* Detail drawer: slides in from the right over a blurred scrim; DetailDrawer waits for the 200ms exit before unmounting. */
 .detail-overlay {
   position: fixed;
   inset: 0;
   z-index: 30;
   display: flex;
   justify-content: flex-end;
+}
+
+.detail-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
   background: var(--scrim);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: scrim-in 0.28s var(--ease-out);
 }
 
 .detail-drawer {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: min(640px, 94vw);
@@ -397,21 +496,50 @@
   background: var(--surface);
   color: var(--ink);
   box-shadow: -1px 0 0 var(--line), var(--shadow-pop);
-  animation: drawer-in 0.2s var(--ease-out);
+  animation: drawer-in 0.28s var(--ease-out);
+}
+
+.detail-overlay.is-closing {
+  pointer-events: none;
+}
+
+.detail-overlay.is-closing::before {
+  animation: scrim-out 0.2s var(--ease-out) forwards;
+}
+
+.detail-overlay.is-closing .detail-drawer {
+  animation: drawer-out 0.2s var(--ease-out) forwards;
 }
 
 .detail-drawer:focus {
   outline: none;
 }
 
-.detail-drawer[data-keyboard=true] {
+.detail-overlay .detail-drawer[data-keyboard=true] {
   animation: none;
 }
 
 @keyframes drawer-in {
   from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes drawer-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes scrim-in {
+  from {
     opacity: 0;
-    transform: translateX(16px);
+  }
+}
+
+@keyframes scrim-out {
+  to {
+    opacity: 0;
   }
 }
 

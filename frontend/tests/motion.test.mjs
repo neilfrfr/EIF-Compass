@@ -13,7 +13,7 @@ const runFrame=now=>{const queue=frames;frames=[];queue.forEach(cb=>cb(now))}
 const {createRoot}=await import('react-dom/client')
 mkdirSync('.test-output',{recursive:true})
 writeFileSync('.test-output/motion.js',ts.transpileModule(readFileSync('src/motion.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText)
-const {useCountUp,usePageTransition,reducedMotion}=await import('../.test-output/motion.js')
+const {useCountUp,usePageTransition,reducedMotion,useCompletionFlash,useRowGlide}=await import('../.test-output/motion.js')
 
 let seen
 function Count({target}){seen=useCountUp(target);return null}
@@ -71,5 +71,37 @@ reduce=true
 await act(async()=>r2.render(React.createElement(Page,{k:'calendar'})))
 assert.equal(seen.className,'','reduced motion: no transition class')
 assert.equal(seen.key,'calendar','reduced motion: instant switch')
+await act(async()=>r2.unmount())
+
+reduce=false
+let flashApi
+function Flash(){flashApi=useCompletionFlash();return null}
+r2=createRoot(document.getElementById('root'))
+await act(async()=>r2.render(React.createElement(Flash)))
+assert.equal(flashApi.isFlashing('t1'),false)
+await act(async()=>flashApi.flash('t1'))
+assert.equal(flashApi.isFlashing('t1'),true,'flashing right after flash()')
+assert.equal(flashApi.isFlashing('t2'),false)
+await act(async()=>new Promise(r=>realTimeout(r,650)))
+assert.equal(flashApi.isFlashing('t1'),false,'flash ends after 600ms')
+await act(async()=>r2.unmount())
+
+// useRowGlide: one aria-hidden glide per list, follows the hovered row, hides on leave, absent under reduced motion
+function Glide(){const ref=React.useRef(null);useRowGlide(ref,'.row');return React.createElement('div',{ref,className:'list'},React.createElement('div',{className:'row'},'A'),React.createElement('div',{className:'row'},'B'))}
+r2=createRoot(document.getElementById('root'))
+await act(async()=>r2.render(React.createElement(Glide)))
+const list=document.querySelector('.list'),glide=list.querySelector('.row-glide')
+assert.ok(glide&&glide.getAttribute('aria-hidden')==='true','one aria-hidden glide')
+await act(async()=>r2.render(React.createElement(Glide)))
+assert.equal(list.querySelectorAll('.row-glide').length,1,'re-render does not duplicate the glide')
+list.querySelectorAll('.row')[1].dispatchEvent(new window.Event('pointerover',{bubbles:true}))
+assert.equal(glide.style.opacity,'1','glide shows on a row')
+list.dispatchEvent(new window.Event('pointerleave'))
+assert.equal(glide.style.opacity,'0','glide hides on leave')
+await act(async()=>r2.unmount())
+reduce=true
+r2=createRoot(document.getElementById('root'))
+await act(async()=>r2.render(React.createElement(Glide)))
+assert.equal(document.querySelector('.row-glide'),null,'no glide under reduced motion')
 await act(async()=>r2.unmount())
 console.log('PASS: motion hooks')

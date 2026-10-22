@@ -1,8 +1,9 @@
-import {requirementState,requirementLabels} from '../../shared/workflow-rules.mjs'
+import {requirementState} from '../../shared/workflow-rules.mjs'
 import {useEffect,useRef,useState} from 'react'
 import type {SupabaseClient} from '@supabase/supabase-js'
 import {canEditSubmission,submissionCutoff,submissionLinks,validSubmissionLink,validateAttachment} from './submissions'
 import type {SubmissionRow,SubmissionRequirement} from './submissions'
+import StatusBadge from './StatusBadge'
 type Attachment={id:string;name:string;object_path:string;size:number;uploaded:boolean}
 type Props={client:SupabaseClient;role:string;userId:string;requirement:SubmissionRequirement&{id:string};submission?:SubmissionRow;onChanged:()=>void;onDirtyChange?:(dirty:boolean)=>void;onBusyChange?:(busy:boolean)=>void}
 export default function SubmissionBin({client,role,userId,requirement,submission,onChanged,onDirtyChange,onBusyChange}:Props){
@@ -22,6 +23,7 @@ export default function SubmissionBin({client,role,userId,requirement,submission
  useEffect(()=>{busyCallback.current?.(busy);return()=>busyCallback.current?.(false)},[busy])
  useEffect(()=>{onDirtyChange?.(role==='intern'&&(links!==(current?submissionLinks(current).join('\n'):'')||note!==(current?.note||'')))},[links,note,current,role,onDirtyChange])
  const cutoff=submissionCutoff(requirement),expired=!!cutoff&&clock.getTime()>=Date.parse(cutoff)
+ const state=requirementState(requirement,owner,current?[current]:[],clock)
  const editable=role==='intern'&&owner===userId&&canEditSubmission(requirement,current,clock)
  const message=(e:unknown)=>e&&typeof e==='object'&&'message'in e?String(e.message):'Could not save. Please try again.'
  async function action(work:()=>Promise<void>){if(busy)return;setBusy(true);setError('');setNotice('');try{await work();setRevision(v=>v+1)}catch(e){setError(message(e))}finally{setBusy(false);if(changed.current){changed.current=false;onChanged()}}}
@@ -62,7 +64,7 @@ export default function SubmissionBin({client,role,userId,requirement,submission
   const link=document.createElement('a');link.href=data.signedUrl;link.target='_blank';link.rel='noopener noreferrer';link.click()
  }
  return <section className="submission-bin" aria-label="Submission bin" aria-busy={busy}>
-  <div className="dashboard-section-head"><h4>{role==='lead'?'Submitted work':'Your submission'}</h4><span className="data-pill">{requirementLabels[requirementState(requirement,owner,current?[current]:[],clock)]}</span></div>
+  <div className="dashboard-section-head"><h4>{role==='lead'?'Submitted work':'Your submission'}</h4><span className="badge-swap" key={state}><StatusBadge status={state}/></span></div>
   {cutoff&&<p className="manager-meta">Editing closes {new Date(cutoff).toLocaleString('en-PH',{timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'short'})} (Philippine time).</p>}
   {requirement.removing&&<p>Locked while your lead finishes removal.</p>}{expired&&<p>Locked: the deadline has passed. Your lead can still review submitted work.</p>}
   {current?.status==='draft'&&<p>Draft saved · not submitted</p>}

@@ -19,12 +19,33 @@
   margin-top: 16px;
 }
 
-/* Agenda */
+/* The event manager and Google sync panels open with a downward reveal */
+.agenda ~ .panel {
+  animation: panel-reveal 0.4s var(--ease-out);
+}
+
+@keyframes panel-reveal {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(-6px);
+  }
+}
+
+/* Agenda: day groups stagger in; each carries a date tile, and today's is accented */
+.agenda-day {
+  animation: rise 0.6s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
 .agenda-day + .agenda-day {
   margin-top: 20px;
 }
 
 .agenda-day > h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
   padding-bottom: 6px;
   color: var(--muted);
@@ -33,9 +54,40 @@
   letter-spacing: 0.01em;
 }
 
+.date-tile {
+  flex: none;
+  width: 40px;
+  padding: 4px 0;
+  border-radius: var(--r-btn);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.3;
+  text-align: center;
+  text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.date-tile b {
+  display: block;
+  color: var(--strong);
+  font-size: 16px;
+  font-weight: 510;
+  font-variant-numeric: tabular-nums;
+}
+
 .agenda-today > h3 {
   color: var(--accenttext);
   font-weight: 590;
+}
+
+.agenda-today .date-tile {
+  background: var(--chip);
+  color: var(--accenttext);
+  box-shadow: inset 0 0 0 1px var(--nbaline);
+}
+
+.agenda-today .date-tile b {
+  color: var(--accenttext);
 }
 
 .agenda-list article {
@@ -150,7 +202,7 @@
   cursor: pointer;
 }
 
-.calendar-selection label:first-child {
+.calendar-selection label:first-of-type {
   border-top-color: transparent;
 }
 
@@ -270,10 +322,6 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .calendar-selection label:hover {
-    background: var(--hover);
-  }
-
   .calendar-selection label:hover,
   .calendar-selection label:hover + label {
     border-top-color: transparent;
@@ -281,6 +329,10 @@
 }
 
 @media (forced-colors: active) {
+  .date-tile {
+    border: 1px solid CanvasText;
+  }
+
   .calendar-selection input {
     forced-color-adjust: none;
     border-color: CanvasText;

@@ -18,10 +18,12 @@
   margin: 0 0 12px;
 }
 
-/* Segmented status tabs */
+/* Segmented status tabs: equal-width tabs so the shared pill (useSlidingIndicator) only slides, never resizes */
 .flow-tabs {
-  display: inline-flex;
-  flex-wrap: wrap;
+  position: relative;
+  display: inline-grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
   gap: 2px;
   padding: 3px;
   border-radius: var(--r-btn);
@@ -30,6 +32,8 @@
 }
 
 .panel .flow-tabs button {
+  position: relative;
+  z-index: 1;
   min-height: 32px;
   padding: 5px 14px;
   border: 0;
@@ -42,8 +46,13 @@
 }
 
 .panel .flow-tabs button[aria-pressed=true] {
-  background: var(--surface);
   color: var(--strong);
+}
+
+.flow-tabs .nav-pill {
+  right: auto;
+  border-radius: var(--r-badge);
+  background: var(--surface);
   box-shadow: inset 0 0 0 1px var(--line), var(--shadow);
 }
 
@@ -103,6 +112,17 @@
 .flow-card progress {
   max-width: 460px;
   margin: 8px 0 12px;
+  animation: bar-fill 0.9s var(--ease-out) 0.2s both;
+}
+
+.blocker-card .flow-row > strong .status-badge {
+  margin-left: 4px;
+  vertical-align: 1px;
+}
+
+.project-card p > .status-badge {
+  margin: 0 4px;
+  vertical-align: 1px;
 }
 
 .project-card h3 {
@@ -153,7 +173,34 @@
   font-size: 12px;
 }
 
-/* Notifications */
+/* Notifications: unread carries a soft accent bar that fades out once marked read */
+.intern-flows > .flow-card {
+  position: relative;
+}
+
+.intern-flows .flow-unread::before,
+.intern-flows .flow-just-read::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 3px;
+  border-radius: var(--r-badge);
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+.intern-flows .flow-just-read::before {
+  animation: bar-fade 0.6s var(--ease-out) forwards;
+}
+
+@keyframes bar-fade {
+  to {
+    opacity: 0;
+  }
+}
+
 .intern-flows .flow-unread {
   margin: 4px -12px;
   border-top-color: transparent;
@@ -224,6 +271,12 @@
 .flow-comment strong {
   color: var(--strong);
   font-weight: 510;
+}
+
+/* Room for field focus rings inside the clipped expanding body */
+.blocker-discussion > .expand > div {
+  margin: 0 -4px;
+  padding: 0 4px 4px;
 }
 
 .blocker-discussion form {
@@ -317,6 +370,10 @@
 }
 
 @media (forced-colors: active) {
+  .intern-flows .flow-unread::before {
+    background: Highlight;
+  }
+
   .flow-tabs,
   .intern-flows .flow-unread {
     border: 1px solid CanvasText;
