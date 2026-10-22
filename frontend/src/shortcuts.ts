@@ -10,7 +10,7 @@ export function createGoShortcut(map:Record<string,View>,go:(v:View)=>void,timeo
   let armedAt=0
   return e=>{
     if(e.ctrlKey||e.altKey||e.metaKey||isTypingTarget(e.target))return
-    const key=e.key.toLowerCase()
+    const key=e.key?.toLowerCase()??''
     const armed=armedAt>0&&Date.now()-armedAt<=timeoutMs
     armedAt=0
     if(armed&&Object.hasOwn(map,key)){go(map[key]);return}

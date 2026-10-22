@@ -7,13 +7,14 @@ export default function CommandPalette({items}:{items:PaletteItem[]}){
   const [query,setQuery]=useState('')
   const [index,setIndex]=useState(0)
   const dialog=useRef<HTMLDialogElement>(null)
+  const shown=useRef(false)
   const previous=useRef<HTMLElement|null>(null)
   const matches=items.filter(i=>i.label.toLowerCase().includes(query.trim().toLowerCase()))
   const active=matches.length?Math.min(index,matches.length-1):-1
 
   useEffect(()=>{
-    const show=()=>{previous.current=document.activeElement as HTMLElement|null;setQuery('');setIndex(0);setOpen(true)}
-    const key=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();show()}}
+    const show=()=>{if(shown.current||document.querySelector('.detail-overlay'))return;shown.current=true;previous.current=document.activeElement as HTMLElement|null;setQuery('');setIndex(0);setOpen(true)}
+    const key=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key?.toLowerCase()==='k'){e.preventDefault();show()}}
     window.addEventListener('keydown',key)
     window.addEventListener('eif:palette',show)
     return()=>{window.removeEventListener('keydown',key);window.removeEventListener('eif:palette',show)}
@@ -24,7 +25,7 @@ export default function CommandPalette({items}:{items:PaletteItem[]}){
   function close(){
     const d=dialog.current
     if(d?.open)d.close()
-    setOpen(false)
+    setOpen(false);shown.current=false
     previous.current?.focus?.()
     previous.current=null
   }
