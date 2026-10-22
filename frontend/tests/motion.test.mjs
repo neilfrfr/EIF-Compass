@@ -13,7 +13,7 @@ const runFrame=now=>{const queue=frames;frames=[];queue.forEach(cb=>cb(now))}
 const {createRoot}=await import('react-dom/client')
 mkdirSync('.test-output',{recursive:true})
 writeFileSync('.test-output/motion.js',ts.transpileModule(readFileSync('src/motion.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText)
-const {useCountUp,usePageTransition,reducedMotion,useCompletionFlash,useRowGlide}=await import('../.test-output/motion.js')
+const {useCountUp,usePageTransition,reducedMotion,useCompletionFlash,useRowGlide,placePill}=await import('../.test-output/motion.js')
 
 let seen
 function Count({target}){seen=useCountUp(target);return null}
@@ -109,4 +109,9 @@ r2=createRoot(document.getElementById('root'))
 await act(async()=>r2.render(React.createElement(Glide)))
 assert.equal(document.querySelector('.row-glide'),null,'no glide under reduced motion')
 await act(async()=>r2.unmount())
+// placePill: the first placement skips the transition then restores it; later moves leave it alone
+const pill=document.createElement('span'),item=document.createElement('a'),writes=[];let tr=''
+Object.defineProperty(pill.style,'transition',{get:()=>tr,set:v=>{writes.push(v);tr=v}})
+placePill(item,pill,true);assert.deepEqual(writes,['none',''],'first placement is instant, then the transition returns')
+placePill(item,pill);assert.deepEqual(writes,['none',''],'later placements keep the stylesheet transition')
 console.log('PASS: motion hooks')

@@ -27,12 +27,14 @@ export function useCountUp(target:number|null,{delay=0,duration=1100}:{delay?:nu
 
 /** Slides `.nav-pill` to the item matching `activeSelector` and `.nav-hover-pill` to the hovered `.nav-item`. */
 export function useSlidingIndicator(container:RefObject<HTMLElement|null>,activeSelector:string):void{
-  const lastActive=useRef('')
+  const lastActive=useRef(''),placed=useRef(false)
   // Placement has no deps: the nav can mount after the first render (once the profile loads), and the style writes are idempotent.
   useLayoutEffect(()=>{
     const nav=container.current
     if(!nav)return
-    placePill(nav.querySelector(activeSelector),nav.querySelector('.nav-pill'))
+    const item=nav.querySelector<HTMLElement>(activeSelector),pill=nav.querySelector<HTMLElement>('.nav-pill')
+    placePill(item,pill,!placed.current&&!!item&&!!pill)
+    if(item&&pill)placed.current=true
     if(lastActive.current!==activeSelector){lastActive.current=activeSelector;placePill(null,nav.querySelector('.nav-hover-pill'))}
   })
   // Listeners are delegated from document so they bind once per active item, whenever the nav mounts.
@@ -50,10 +52,13 @@ export function useSlidingIndicator(container:RefObject<HTMLElement|null>,active
   },[container,activeSelector])
 }
 
-export function placePill(item:HTMLElement|null,pill:HTMLElement|null){
+/** `instant` places without the slide (first placement), then restores the stylesheet transition. */
+export function placePill(item:HTMLElement|null,pill:HTMLElement|null,instant=false){
   if(!pill)return
+  if(instant)pill.style.transition='none'
   pill.style.opacity=item?'1':'0'
   if(item){pill.style.transform=`translate(${item.offsetLeft}px,${item.offsetTop}px)`;pill.style.width=`${item.offsetWidth}px`;pill.style.height=`${item.offsetHeight}px`}
+  if(instant){void pill.offsetWidth;pill.style.transition=''}
 }
 
 /** Inserts one `.row-glide` into the list and slides it to the hovered row. CSS shows it on fine pointers only; absent under reduced motion. */
