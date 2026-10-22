@@ -16,7 +16,7 @@ const {default:Dashboard}=await import('../.test-output/Dashboard.js')
 const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'})
 Object.assign(globalThis,{window:dom.window,document:dom.window.document,IS_REACT_ACT_ENVIRONMENT:true})
 // Reduced motion: count-ups must show their final values on first paint.
-window.matchMedia=query=>({matches:query.includes('reduce')});window.requestAnimationFrame=()=>0;window.cancelAnimationFrame=()=>{}
+let reduced=true;window.matchMedia=query=>({matches:reduced&&query.includes('reduce')});window.requestAnimationFrame=()=>0;window.cancelAnimationFrame=()=>{}
 const badgesOk=()=>{const badges=[...document.querySelectorAll('.status-badge')];assert.ok(badges.length>0,'status badges render');for(const b of badges){assert.ok(b.textContent.trim(),'badge has text');assert.equal(b.querySelector('svg')?.getAttribute('aria-hidden'),'true','badge has an aria-hidden icon')}}
 const rows={cohorts:{id:'c',name:'Database cohort',starts_on:'2026-09-30',ends_on:'2026-11-24'},profiles:[{id:'a',display_name:'Database Intern A',role:'intern',team_name:null},{id:'b',display_name:'Database Intern B',role:'intern',team_name:null}],tasks:[{id:'t1',title:'A private task',assignee_id:'a',status:'completed',due_date:'2026-10-07'},{id:'t2',title:'B private task',assignee_id:'b',status:'to_do',due_date:'2026-10-04'}],requirements:[{id:'r',title:'Actual reflection',status:'pending',assignee_id:null,due_date:'2026-10-04'}],requirement_submissions:[{requirement_id:'r',user_id:'a',status:'in_review',submission_url:'https://example.com'}],events:[{id:'e',title:'Actual future event',starts_at:'2099-10-07T14:00:00+08:00'}],blockers:[{id:'block',reporter_id:'b',project_id:'project',status:'open',description:'Missing access'}],milestones:[],projects:[{id:'project',title:'Team research',team_id:'team'}],teams:[{id:'team',name:'Research'}],team_memberships:[{team_id:'team',user_id:'a'},{team_id:'team',user_id:'b'}]}
 const client={from(table){return {select(){return this},eq(){return this},maybeSingle(){return Promise.resolve({data:rows[table],error:null})},then(resolve,reject){return Promise.resolve({data:rows[table],error:null}).then(resolve,reject)}}}}
@@ -73,5 +73,16 @@ assert.match(document.querySelector('.explain-inline').textContent,/Saved to you
 await explain();assert.equal(document.querySelector('.explain-inline').hidden,true,'collapse hides without discarding')
 await explain();await explain();await explain()
 assert.equal(asked.length,1,'reopening never asks again');assert.match(document.querySelector('.explain-inline').textContent,/Start with the outline/)
+// Review queue: a reviewed submission holds as .is-completing for 600ms, then leaves
+reduced=false
+rows.requirement_submissions.push({requirement_id:'queue-req',user_id:'a',status:'in_review'});rows.requirements.push({id:'queue-req',title:'Queue requirement',assignee_id:null,due_date:'2099-01-01'})
+await render('lead',20)
+const queueRow=()=>[...document.querySelectorAll('.dashboard-line')].find(e=>e.textContent.includes('Queue requirement'))
+assert.ok(queueRow()&&!queueRow().classList.contains('is-completing'),'Queued submission is a plain row')
+rows.requirement_submissions=rows.requirement_submissions.map(s=>s.requirement_id==='queue-req'?{...s,status:'completed'}:s)
+await render('lead',21)
+assert.ok(queueRow()?.classList.contains('is-completing'),'Reviewed submission holds with .is-completing')
+await act(async()=>new Promise(r=>setTimeout(r,650)))
+assert.ok(!queueRow(),'Reviewed submission is gone after 600ms')
 await act(async()=>root.unmount())
 console.log('PASS: database-backed role layouts, intern isolation, review queue, drill-down and navigation')

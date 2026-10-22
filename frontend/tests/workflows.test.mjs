@@ -132,6 +132,15 @@ assert.ok(document.querySelector('.detail-overlay.is-closing [role="dialog"]'),'
 await act(async()=>finishExit())
 assert.ok(!document.querySelector('[role="dialog"]'),'Drawer unmounts once the exit finishes')
 assert.ok(!document.getElementById('root').inert,'Siblings are no longer inert')
+// Add during the exit starts a fresh drawer; the leaving one must not close it
+await click('Add task');document.querySelector('[name="title"]').value='Second';await submit()
+assert.ok(document.querySelector('.detail-overlay.is-closing'),'Second save plays its exit')
+await click('Add task')
+assert.ok(document.querySelector('.detail-overlay:not(.is-closing) [name="title"]'),'Add during the exit opens a new editor')
+await act(async()=>finishExit())
+assert.ok(document.querySelector('.detail-overlay:not(.is-closing) [name="title"]'),'The leaving drawer does not close the new editor')
+await click('Close');await act(async()=>finishExit())
+assert.ok(!document.querySelector('[role="dialog"]'))
 delete window.HTMLElement.prototype.getAnimations
 await click('Edit')
 assert.equal(document.querySelector('[name="title"]').value,'Assigned task')

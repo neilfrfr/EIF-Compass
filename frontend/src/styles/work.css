@@ -298,7 +298,8 @@
 }
 
 /* Completing a task (useCompletionFlash, 600ms): a check draws in and a strike sweeps the title, then both fade so nothing pops when the class drops. */
-.manager-record-heading {
+.manager-record-heading,
+.dashboard-line.is-completing > div {
   position: relative;
 }
 
@@ -311,11 +312,13 @@
   animation: check-draw 0.6s var(--ease-out) both;
 }
 
-.work-row.is-completing .record-open {
+.work-row.is-completing .record-open,
+.dashboard-line.is-completing .record-link {
   position: relative;
 }
 
-.work-row.is-completing .record-open::after {
+.work-row.is-completing .record-open::after,
+.dashboard-line.is-completing .record-link::after {
   content: "";
   position: absolute;
   top: 55%;
@@ -328,7 +331,9 @@
 }
 
 /* The filter no longer matches: slip away just before the row unmounts. */
-.work-row.is-leaving {
+.work-row.is-leaving,
+.flow-card.is-leaving,
+.dashboard-line.is-leaving {
   animation: row-leave 0.2s var(--ease-out) 0.35s both;
 }
 
@@ -864,5 +869,45 @@
   .data-pill,
   .detail-drawer {
     border: 1px solid CanvasText;
+  }
+}
+
+/* Busy button: a light sweep while its action is saving (transform only) */
+.is-busy {
+  position: relative;
+  overflow: hidden;
+}
+
+.is-busy::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--onaccent) 25%, transparent) 50%, transparent 70%);
+  animation: shimmer 1s linear infinite;
+}
+
+.text-button.is-busy::after {
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--accent) 22%, transparent) 50%, transparent 70%);
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* A newly posted card slides into the top of its list */
+.flow-enter {
+  animation: flow-enter 0.4s var(--ease-out);
+}
+
+@keyframes flow-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
   }
 }
