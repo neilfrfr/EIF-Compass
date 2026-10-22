@@ -78,6 +78,11 @@ await act(async()=>{stream.enqueue(line(complete('Conflicted',false,'generation_
 assert.ok(!button('Retry saving'),'no retry on a generation conflict');assert.ok(button('Open in assistant'));assert.ok(document.querySelector('[role="alert"]'))
 await act(async()=>button('Open in assistant').click());assert.equal(opened,2)
 
+// (g2) A revision conflict is handled the same way.
+await reset();await render();await flush()
+await act(async()=>{stream.enqueue(line(complete('Conflicted',false,'revision_conflict')));stream.close()});await flush()
+assert.ok(!button('Retry saving'),'no retry on a revision conflict');assert.ok(button('Open in assistant'));assert.ok(document.querySelector('[role="alert"]'))
+
 // (h) A retry that hits a 409 conflict hides Retry afterwards.
 await reset();await render();await flush()
 await act(async()=>{stream.enqueue(line(complete('Answer',false)));stream.close()});await flush()

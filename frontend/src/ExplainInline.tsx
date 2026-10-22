@@ -35,8 +35,8 @@ export default function ExplainInline({client,userId,role,cohortId,action,questi
         setAnswer(result.answer)
         if(result.historySaved){setPhase('saved');return}
         setUnsaved({conversationId:c.id,requestId:result.requestId,question:message,answer:result.answer,generatedAt:result.generatedAt,truncated:result.truncated,sourceRefs:result.sourceRefs||[],sources:result.sources||[],generation:c.generation,revision:c.revision})
-        // A generation conflict cannot be fixed by retrying with this snapshot; hand over to the Assistant, which reloads history.
-        if(result.saveError==='generation_conflict'){setConflict(true);setError(conflictText)}else setError('This answer has not been saved yet. Retry saving.')
+        // A generation or revision conflict cannot be fixed by retrying with this snapshot; hand over to the Assistant, which reloads history.
+        if(/conflict$/.test(result.saveError||'')){setConflict(true);setError(conflictText)}else setError('This answer has not been saved yet. Retry saving.')
         setPhase('unsaved')
       }catch(e){if(live()){setError(errorText(e,'Could not connect.'));setPhase('failed')}}
     })()
