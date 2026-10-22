@@ -31,6 +31,9 @@ handler(key('g'));now+=1000;handler(key('w'));assert.deepEqual(went,['work'],'to
 handler(key('g'));handler(key('w',el('<input>')));assert.deepEqual(went,['work'],'typing target ignored')
 handler(key('g'));handler(key('w',document.body,{ctrlKey:true}));assert.deepEqual(went,['work'],'ctrl ignored')
 handler(key('g'));handler(key('o'));assert.deepEqual(went,['work','overview'])
+const drawer=el('<div class="detail-overlay"></div>')
+handler(key('g'));handler(key('w'));assert.deepEqual(went,['work','overview'],'G shortcuts do nothing while a drawer is open')
+drawer.remove()
 Date.now=realNow
 
 // palette

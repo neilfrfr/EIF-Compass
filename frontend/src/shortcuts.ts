@@ -9,7 +9,7 @@ export function isTypingTarget(el:EventTarget|null):boolean{
 export function createGoShortcut(map:Record<string,View>,go:(v:View)=>void,timeoutMs=900):(e:KeyboardEvent)=>void{
   let armedAt=0
   return e=>{
-    if(e.ctrlKey||e.altKey||e.metaKey||isTypingTarget(e.target))return
+    if(e.ctrlKey||e.altKey||e.metaKey||isTypingTarget(e.target)||globalThis.document?.querySelector('.detail-overlay'))return
     const key=e.key?.toLowerCase()??''
     const armed=armedAt>0&&Date.now()-armedAt<=timeoutMs
     armedAt=0
