@@ -122,6 +122,8 @@ class Query {
 export function createFixtureClient(role: Role): SupabaseClient {
   const db = seed()
   const userId = FIXTURE_IDS[role]
+  // Stand in for RLS: users only see their own notifications.
+  db.notifications = db.notifications.filter(n => n.recipient_id === userId)
   const session = {access_token: 'fixture-token', refresh_token: 'fixture-refresh', expires_in: 3600, token_type: 'bearer', user: {id: userId, email: `${role}@fixture.test`}}
   let current: typeof session | null = session
   const listeners = new Set<(event: string, session: typeof current) => void>()
