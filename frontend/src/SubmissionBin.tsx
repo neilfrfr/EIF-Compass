@@ -5,9 +5,9 @@ import {canEditSubmission,submissionCutoff,submissionLinks,validSubmissionLink,v
 import type {SubmissionRow,SubmissionRequirement} from './submissions'
 import StatusBadge from './StatusBadge'
 type Attachment={id:string;name:string;object_path:string;size:number;uploaded:boolean}
-type Props={client:SupabaseClient;role:string;userId:string;requirement:SubmissionRequirement&{id:string};submission?:SubmissionRow;onChanged:()=>void;onDirtyChange?:(dirty:boolean)=>void;onBusyChange?:(busy:boolean)=>void}
+type Props={client:SupabaseClient;role:string;userId:string;requirement:SubmissionRequirement&{id:string};submission?:SubmissionRow;onChanged:(status?:string)=>void;onDirtyChange?:(dirty:boolean)=>void;onBusyChange?:(busy:boolean)=>void}
 export default function SubmissionBin({client,role,userId,requirement,submission,onChanged,onDirtyChange,onBusyChange}:Props){
- const changed=useRef(false)
+ const changed=useRef<boolean|string>(false)
  const busyCallback=useRef(onBusyChange)
  busyCallback.current=onBusyChange
  const owner=submission?.user_id||userId
@@ -26,7 +26,7 @@ export default function SubmissionBin({client,role,userId,requirement,submission
  const state=requirementState(requirement,owner,current?[current]:[],clock)
  const editable=role==='intern'&&owner===userId&&canEditSubmission(requirement,current,clock)
  const message=(e:unknown)=>e&&typeof e==='object'&&'message'in e?String(e.message):'Could not save. Please try again.'
- async function action(work:()=>Promise<void>,key=''){if(busy)return;setBusy(true);setActing(key);setError('');setNotice('');try{await work();setRevision(v=>v+1)}catch(e){setError(message(e))}finally{setBusy(false);setActing('');if(changed.current){changed.current=false;onChanged()}}}
+ async function action(work:()=>Promise<void>,key=''){if(busy)return;setBusy(true);setActing(key);setError('');setNotice('');try{await work();setRevision(v=>v+1)}catch(e){setError(message(e))}finally{setBusy(false);setActing('');if(changed.current){const status=changed.current;changed.current=false;onChanged(typeof status==='string'?status:undefined)}}}
  async function draft(){
   const values=links.split('\n').map(v=>v.trim()).filter(Boolean)
   if(values.length>10||values.some(v=>!validSubmissionLink(v)))throw new Error('Enter up to ten valid HTTP or HTTPS links, one per line.')
@@ -36,7 +36,7 @@ export default function SubmissionBin({client,role,userId,requirement,submission
  }
  async function changeStatus(status:string){
   const {data,error}=await client.from('requirement_submissions').update({status}).eq('requirement_id',requirement.id).eq('user_id',owner).select('*').single()
-  if(error)throw error;if(!data)throw new Error('Submission was not changed.');setCurrent(data);setNotice(status==='draft'?'Unsubmitted. You can edit before the deadline.':status==='in_review'?'Submitted for lead review.':'Review saved.');changed.current=true
+  if(error)throw error;if(!data)throw new Error('Submission was not changed.');setCurrent(data);setNotice(status==='draft'?'Unsubmitted. You can edit before the deadline.':status==='in_review'?'Submitted for lead review.':'Review saved.');changed.current=status
  }
  async function upload(selected:File[]){
   if(files.length+selected.length>5)throw new Error('Maximum five attachments. Remove a file before adding more.')
