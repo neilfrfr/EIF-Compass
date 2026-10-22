@@ -14,11 +14,11 @@ Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLEle
 const root=createRoot(document.getElementById('root'))
 const calls=[]
 const fixtures={profiles:[{id:'intern-a',display_name:'Intern A',role:'intern',cohort_id:'cohort'}],projects:[{id:'project-a',team_id:'team-a',title:'Research project'}],sprints:[{id:'sprint-a',project_id:'project-a',title:'Sprint 1',sequence:1}],milestones:[{id:'milestone-a',project_id:'project-a',sprint_id:'sprint-a',title:'Discovery'}],tasks:[{id:'task-a',title:'Assigned task',assignee_id:'intern-a',cohort_id:'cohort',description:'Notes',project_name:'Compass',due_date:'2026-10-07',priority:'high',status:'to_do'},{id:'shared',title:'Shared task',assignee_id:null,cohort_id:'cohort',priority:'low',status:'to_do'}],requirements:[{id:'req-a',title:'Reflection',cohort_id:'cohort',due_date:'2026-10-04',status:'pending',assignee_id:null}],events:[{id:'event-a',title:'Check-in',starts_at:'2026-10-07T14:00:00+08:00',location:'Online',event_type:'Milestone'}],requirement_submissions:[],submission_files:[]}
-let failWrite=false, deferReviews=false, holdTaskReads=false
+let failWrite=false, deferReviews=false, holdTaskReads=false, failHeldRead=false
 const heldReads=[]
 const pendingReviews=[]
 globalThis.fetch=async()=>{calls.push({table:'requirements',op:'delete'});return new Response(JSON.stringify(failWrite?{error:'Save denied'}:{data:[{id:'saved'}]}),{status:failWrite?502:200})}
-const client={auth:{async getSession(){return {data:{session:{access_token:'test'}}}}},from(table){const q={table,op:'read',payload:null,filters:[],select(){return this},order(){return this},eq(k,v){this.filters.push([k,v]);return this},insert(p){this.op='insert';this.payload=p;return this},update(p){this.op='update';this.payload=p;return this},upsert(p){this.op='upsert';this.payload=p;return this},delete(){this.op='delete';return this},single(){return this},then(resolve,reject){if(holdTaskReads&&this.op==='read'&&this.table==='tasks')return new Promise(done=>heldReads.push(done)).then(()=>({data:fixtures.tasks,error:null})).then(resolve,reject);if(deferReviews&&this.op==='update'&&this.table==='requirement_submissions')return new Promise(done=>pendingReviews.push(done)).then(resolve,reject);if(this.op!=='read')calls.push({table:this.table,op:this.op,payload:this.payload,filters:this.filters});return Promise.resolve(failWrite&&this.op!=='read'?{data:null,error:{message:'Save denied'}}:{data:this.op==='read'?fixtures[table]:(table==='requirement_submissions'?{...this.payload,requirement_id:'req-a',user_id:'intern-a'}:[{id:'saved'}]),error:null}).then(resolve,reject)}};return q}}
+const client={auth:{async getSession(){return {data:{session:{access_token:'test'}}}}},from(table){const q={table,op:'read',payload:null,filters:[],select(){return this},order(){return this},eq(k,v){this.filters.push([k,v]);return this},insert(p){this.op='insert';this.payload=p;return this},update(p){this.op='update';this.payload=p;return this},upsert(p){this.op='upsert';this.payload=p;return this},delete(){this.op='delete';return this},single(){return this},then(resolve,reject){if(holdTaskReads&&this.op==='read'&&this.table==='tasks')return new Promise(done=>heldReads.push(done)).then(()=>failHeldRead?({data:null,error:{message:'Load failed'}}):({data:fixtures.tasks,error:null})).then(resolve,reject);if(deferReviews&&this.op==='update'&&this.table==='requirement_submissions')return new Promise(done=>pendingReviews.push(done)).then(resolve,reject);if(this.op!=='read')calls.push({table:this.table,op:this.op,payload:this.payload,filters:this.filters});return Promise.resolve(failWrite&&this.op!=='read'?{data:null,error:{message:'Save denied'}}:{data:this.op==='read'?fixtures[table]:(table==='requirement_submissions'?{...this.payload,requirement_id:'req-a',user_id:'intern-a'}:[{id:'saved'}]),error:null}).then(resolve,reject)}};return q}}
 const render=async(role,view)=>act(async()=>{root.render(React.createElement(WorkManager,{client,role,view,userId:'intern-a',cohortId:'cohort',onChanged(){}}))})
 const click=async(text)=>act(async()=>{const button=[...document.querySelectorAll('button')].find(b=>b.textContent===text);assert.ok(button,`Missing ${text}`);button.click()})
 const submit=async()=>act(async()=>{document.querySelector('form').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}))})
@@ -117,6 +117,13 @@ await act(async()=>new Promise(r=>setTimeout(r,650)))
 assert.ok(!row(),'Row leaves ~600ms after the reload resolves')
 fixtures.tasks=originalTasks
 await act(async()=>{statusFilter().value='all';statusFilter().dispatchEvent(new window.Event('change',{bubbles:true}))})
+// A failed reload clears the held completion, so the next load does not replay it
+holdTaskReads=true;failHeldRead=true
+await act(async()=>{const s=document.querySelector('[aria-label="Status for Assigned task"]');s.value='completed';s.dispatchEvent(new window.Event('change',{bubbles:true}))})
+holdTaskReads=false;await act(async()=>heldReads.shift()())
+assert.match(document.body.textContent,/Load failed/,'The failed reload is reported')
+failHeldRead=false;await act(async()=>new Promise(r=>setTimeout(r,650)));await click('Refresh')
+assert.ok(!row()?.classList.contains('is-completing'),'A failed reload does not leave a completion to replay')
 await render('lead','work')
 const statusTexts=new Set(['To do','In progress','For review','Completed','Pending','Under review','In review','Overdue','Upcoming'])
 const badges=[...document.querySelectorAll('.status-badge')]
@@ -151,7 +158,13 @@ await render('intern','requirements')
 assert.ok(document.querySelector('.work-row .status-badge svg'),'Intern requirement status is an icon badge')
 await render('lead','requirements');await click('Review submissions')
 assert.ok(document.querySelector('.submission-bin .status-badge svg'),'Submission status is an icon badge')
-await click('Approve');await click('Close')
+failWrite=true;await click('Approve');failWrite=false
+assert.ok(!document.querySelector('.submission-list .is-completing'),'A failed review does not animate')
+await click('Approve')
+assert.ok(document.querySelector('.submission-list > div.is-completing'),'A reviewed submission row plays the completion pattern')
+await act(async()=>new Promise(r=>setTimeout(r,650)))
+assert.ok(!document.querySelector('.submission-list .is-completing'),'The completion pattern ends after 600ms')
+await click('Close')
 assert.deepEqual(calls.at(-1).payload,{status:'completed'})
 assert.ok(calls.at(-1).filters.some(([k,v])=>k==='user_id'&&v==='intern-a'))
 fixtures.requirement_submissions.push({requirement_id:'req-a',user_id:'intern-b',status:'in_review'})

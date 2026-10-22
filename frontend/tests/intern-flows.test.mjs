@@ -26,7 +26,8 @@ records.notifications.push(
 )
 let destination,recordId
 let noticeRefreshes=0
-const client={rpc(name){assert.equal(name,'refresh_due_notifications');noticeRefreshes++;return Promise.resolve({error:null})},from(table){const q={table,op:'read',payload:null,filters:[],select(){return this},eq(k,v){this.filters.push([k,v]);return this},insert(p){this.op='insert';this.payload=p;return this},update(p){this.op='update';this.payload=p;return this},delete(){this.op='delete';return this},then(resolve,reject){let data=records[table].filter(row=>this.filters.every(([k,v])=>row[k]===v));if(this.op==='insert'){const row={id:`new-${records[table].length}`,created_at:'2026-10-13T00:00:00Z',...(table==='blockers'?{status:'open'}:{}),...this.payload};records[table].push(row);data=[row]}if(this.op==='update'){data.forEach(row=>Object.assign(row,this.payload))}if(this.op==='delete')records[table]=records[table].filter(row=>!data.includes(row));return Promise.resolve({data,error:null}).then(resolve,reject)}};return q}}
+let holdBlockerReads=false,failWrites=false;const heldBlockerReads=[]
+const client={rpc(name){assert.equal(name,'refresh_due_notifications');noticeRefreshes++;return Promise.resolve({error:null})},from(table){const q={table,op:'read',payload:null,filters:[],select(){return this},eq(k,v){this.filters.push([k,v]);return this},insert(p){this.op='insert';this.payload=p;return this},update(p){this.op='update';this.payload=p;return this},delete(){this.op='delete';return this},then(resolve,reject){if(failWrites&&this.op!=='read')return Promise.resolve({data:null,error:{message:'Save denied'}}).then(resolve,reject);let data=records[table].filter(row=>this.filters.every(([k,v])=>row[k]===v));if(this.op==='insert'){const row={id:`new-${records[table].length}`,created_at:'2026-10-13T00:00:00Z',...(table==='blockers'?{status:'open'}:{}),...this.payload};records[table].push(row);data=[row]}if(this.op==='update'){data.forEach(row=>Object.assign(row,this.payload))}if(this.op==='delete')records[table]=records[table].filter(row=>!data.includes(row));if(this.op==='read')data=data.map(row=>({...row}));if(holdBlockerReads&&this.op==='read'&&table==='blockers')return new Promise(done=>heldBlockerReads.push(done)).then(()=>({data,error:null})).then(resolve,reject);return Promise.resolve({data,error:null}).then(resolve,reject)}};return q}}
 const navigate=(view,id)=>{destination=view;recordId=id}
 const statusTexts=new Set(['To do','In progress','For review','Completed','Pending','Under review','Overdue','Upcoming','Open','Resolved'])
 const assertBadges=(min,label)=>{const badges=[...document.querySelectorAll('.status-badge')];assert.ok(badges.length>=min,`${label}: status badges render`);for(const badge of badges){assert.ok(badge.querySelector('svg'),`${label}: badge has an icon`);assert.ok(statusTexts.has(badge.textContent.trim()),`${label}: badge has text (${badge.textContent})`)}}
@@ -101,14 +102,24 @@ assertBadges(1,'Blockers')
 document.querySelector('[name="body"]').value='Access request sent'
 await act(async()=>document.querySelector('form').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true})))
 assert.equal(records.blocker_comments.at(-1).author_id,'lead')
+failWrites=true
+await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Mark resolved').click())
+failWrites=false
+assert.ok(!document.querySelector('.blocker-card.is-completing'),'A failed resolve does not animate')
+assert.equal(records.blockers[0].status,'open')
+holdBlockerReads=true
 await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Mark resolved').click())
 assert.equal(records.blockers[0].status,'resolved')
-assert.match(document.body.textContent,/No open blockers/)
+assert.ok([...document.querySelectorAll('.blocker-card')].some(e=>e.textContent.includes('Need access to data')),'The card stays while the reload is pending')
+assert.ok(!document.querySelector('.blocker-card.is-completing'),'The animation starts only after the reload lands')
+holdBlockerReads=false;await act(async()=>heldBlockerReads.splice(0).forEach(done=>done()))
+assert.doesNotMatch(document.body.textContent,/No open blockers/,'The empty message waits for the card to leave')
 const held=[...document.querySelectorAll('.blocker-card')].find(e=>e.textContent.includes('Need access to data'))
 assert.ok(held?.classList.contains('is-completing'),'Resolved blocker holds while its badge swaps to Resolved')
 assert.match(held.querySelector('.badge-swap').textContent,/Resolved/)
 await act(async()=>new Promise(r=>setTimeout(r,650)))
 assert.ok(![...document.querySelectorAll('.blocker-card')].some(e=>e.textContent.includes('Need access to data')),'Resolved blocker leaves the open list')
+assert.match(document.body.textContent,/No open blockers/)
 await click('Resolved')
 await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Reopen').click())
 assert.equal(records.blockers[0].status,'open')

@@ -10,7 +10,7 @@ import ExplainInline,{explainQuestion} from './ExplainInline'
 import {useCompletionFlash,useCountUp,useRowGlide} from './motion'
 type Props={client:SupabaseClient;role:Role;userId:string;cohortId:string;revision:number;onNavigate:(view:View,recordId?:string)=>void;onOpenAssistant?:(action:Action)=>void}
 function Metric({label,value,suffix='',detail}:{label:string;value:number|null;suffix?:string;detail:string}){const shown=useCountUp(value);return <article><span>{label}</span><strong>{shown===null?'—':`${shown}${suffix}`}</strong><p>{detail}</p></article>}
-type QueueRow={key:string;s:DashboardData['submissions'][number];i:number}
+type QueueRow={key:string;s:DashboardData['submissions'][number];i:number;at?:number}
 const queueKey=(s:{requirement_id:string;user_id:string})=>`${s.requirement_id}-${s.user_id}`
 function day(value?:string|null){return value?new Date(`${value}T12:00:00+08:00`).toLocaleDateString('en-PH',{timeZone:'Asia/Manila',month:'short',day:'numeric'}):'No deadline'}
 export default function Dashboard({client,role,userId,cohortId,revision,onNavigate,onOpenAssistant}:Props){
@@ -31,7 +31,7 @@ export default function Dashboard({client,role,userId,cohortId,revision,onNaviga
   const failure=[cohort,profiles,tasks,requirements,submissions,events,blockers,milestones,projects,projectTeams,memberships,sprints].find(r=>r.error)?.error;if(failure)throw failure;if(!cohort.data)throw new Error('Your cohort record is unavailable.')
   if(active)setLoadedScope(scope)
   const next:DashboardData={cohort:cohort.data,profiles:profiles.data||[],tasks:tasks.data||[],requirements:requirements.data||[],submissions:submissions.data||[],events:events.data||[],blockers:blockers.data||[],milestones:milestones.data||[],projects:projects.data||[],projectTeams:projectTeams.data||[],memberships:memberships.data||[],sprints:sprints.data||[]}
-  if(active){if(role==='lead'&&queue.current.scope===scope){const stay=new Set(deriveDashboard(next,role,userId).reviewQueue.map(queueKey));held.current=queue.current.rows.filter(r=>!stay.has(r.key));held.current.forEach(r=>flash(r.key))}else held.current=[];setData(next)}
+  if(active){if(role==='lead'&&queue.current.scope===scope){const stay=new Set(deriveDashboard(next,role,userId).reviewQueue.map(queueKey));const now=Date.now(),gone=queue.current.rows.filter(r=>!stay.has(r.key)&&next.requirements.some(q=>q.id===r.s.requirement_id&&q.title)).map(r=>({...r,at:now}));held.current=[...held.current.filter(h=>now-(h.at||0)<600&&!stay.has(h.key)&&!gone.some(g=>g.key===h.key)),...gone];gone.forEach(r=>flash(r.key))}else held.current=[];setData(next)}
  }catch(e){if(active){setData(null);setError(e&&typeof e==='object'&&'message' in e?String(e.message):'Could not load dashboard records.')}}finally{if(active)setLoading(false)}}void load();return()=>{active=false}},[client,role,userId,cohortId,revision])
  // A same-scope refresh keeps the current view mounted, so count-ups and a streaming explanation are not reset.
  if(error)return <section className="panel" role="alert">{error}</section>
@@ -39,7 +39,7 @@ export default function Dashboard({client,role,userId,cohortId,revision,onNaviga
  const m=deriveDashboard(data,role,userId)
  const selectedPerson=m.people.find(p=>p.id===selected)
  const next=m.nextAction
- queue.current={scope,rows:m.reviewQueue.map((s,i)=>({key:queueKey(s),s,i}))}
+ queue.current={scope,rows:m.reviewQueue.slice(0,5).map((s,i)=>({key:queueKey(s),s,i}))}
  const queueRows=m.reviewQueue.slice(0,5).map(s=>({key:queueKey(s),s,gone:false}))
  held.current.filter(h=>isFlashing(h.key)&&!queueRows.some(r=>r.key===h.key)).forEach(h=>queueRows.splice(Math.min(h.i,queueRows.length),0,{key:h.key,s:h.s,gone:true}))
  function spotlight(event:PointerEvent<HTMLElement>){if(event.pointerType!=='mouse'||spot.current)return;const card=event.currentTarget,x=event.clientX,y=event.clientY;spot.current=window.requestAnimationFrame(()=>{spot.current=0;const box=card.getBoundingClientRect();card.style.setProperty('--mx',`${x-box.left}px`);card.style.setProperty('--my',`${y-box.top}px`)})}
