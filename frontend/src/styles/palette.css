@@ -14,4 +14,4 @@
   .palette[open] .palette-card{transform:scale(.96) translateY(-6px);filter:blur(4px);opacity:0}
 }
 @media (pointer:fine){.palette li{min-height:36px}}
-@media (forced-colors:active){.palette-card{border:1px solid CanvasText}.palette li[aria-selected=true]{outline:2px solid Highlight}}
+@media (forced-colors:active){.palette-input:focus-visible{outline:2px solid Highlight;outline-offset:-2px}.palette-card{border:1px solid CanvasText}.palette li[aria-selected=true]{outline:2px solid Highlight}}
