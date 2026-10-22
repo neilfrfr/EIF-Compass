@@ -18,7 +18,9 @@ globalThis.__testClient=client
 writeFileSync('.test-output/test-client.js','export const supabase = globalThis.__testClient;')
 const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'})
 Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,MutationObserver:dom.window.MutationObserver,FormData:dom.window.FormData,IS_REACT_ACT_ENVIRONMENT:true})
-window.requestAnimationFrame=callback=>{callback();return 0}
+// Each frame advances a second, so count-ups finish in a few synchronous frames instead of producing NaN.
+let frameTime=0
+window.requestAnimationFrame=callback=>{callback(frameTime+=1000);return 0}
 window.cancelAnimationFrame=()=>{}
 window.scrollTo=()=>{}
 const navigationAnimations=[]

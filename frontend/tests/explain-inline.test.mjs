@@ -17,10 +17,12 @@ assert.equal(explainQuestion({title:'X'}),'Explain why “X” is my next recomm
 const client={auth:{getSession:async()=>({data:{session:{access_token:'tok'}},error:null})}}
 const action={id:'t1',title:'Write summary',view:'work',reason:'Due soon',date:null,dueAt:null,exact:false}
 const encoder=new TextEncoder(),line=event=>encoder.encode(JSON.stringify(event)+'\n')
-let requests=[],stream
+let requests=[],stream,failGet=false,saveConflict=false
 globalThis.fetch=async(url,options)=>{
  const body=options.body?JSON.parse(options.body):undefined;requests.push({url,method:options.method,body,signal:options.signal})
  assert.equal(options.headers.Authorization,'Bearer tok')
+ if(url==='/api/assistant/history'&&options.method==='GET'&&failGet)return Response.json({error:'History unavailable'},{status:503})
+ if(url==='/api/assistant/history'&&options.method==='POST'&&saveConflict)return Response.json({error:'Your history changed in another tab.',code:'revision_conflict'},{status:409})
  if(url==='/api/assistant/history'&&options.method==='GET')return Response.json({conversation:{id:'conv',generation:2,revision:5},turns:[],has_more:false,next_before:null})
  if(url==='/api/assistant/history')return Response.json({conversation:{id:'conv',generation:2,revision:6},turn:{requestId:body.requestId,question:body.question,answer:body.answer}})
  return new Response(new ReadableStream({start(controller){stream=controller}}),{headers:{'content-type':'application/x-ndjson'}})
@@ -33,7 +35,7 @@ const reset=async()=>{await act(async()=>root.render(null));requests=[];stream=u
 const text=()=>document.body.textContent
 const button=label=>[...document.querySelectorAll('button')].find(b=>b.textContent===label)
 const posted=()=>requests.find(r=>r.url==='/api/assistant')
-const complete=(answer,historySaved)=>({type:'complete',result:{requestId:posted().body.requestId,answer,generatedAt:'2026-10-20T12:00:00Z',truncated:false,sourceRefs:[],sources:[],historySaved,...(historySaved?{turn:{requestId:posted().body.requestId,answer},conversation:{id:'conv',generation:2,revision:6}}:{saveError:'history_unavailable'})}})
+const complete=(answer,historySaved,saveError='history_unavailable')=>({type:'complete',result:{requestId:posted().body.requestId,answer,generatedAt:'2026-10-20T12:00:00Z',truncated:false,sourceRefs:[],sources:[],historySaved,...(historySaved?{turn:{requestId:posted().body.requestId,answer},conversation:{id:'conv',generation:2,revision:6}}:{saveError})}})
 
 // (a) Saved: history first, then the Assistant's explain body; deltas stream with "Generating…".
 await render();await flush()
@@ -69,6 +71,23 @@ await act(async()=>stream.enqueue(line({type:'delta',text:'Partial words'})));aw
 await act(async()=>stream.error(new TypeError('Network connection lost')));await flush()
 assert.match(text(),/Partial words/);assert.match(text(),/Incomplete — not saved/);assert.match(text(),/Network connection lost/);assert.ok(!text().includes('Generating…'))
 await act(async()=>button('Open in assistant').click());assert.equal(opened,1)
+
+// (g) A generation conflict cannot be retried: hand over to the Assistant instead.
+await reset();await render();await flush()
+await act(async()=>{stream.enqueue(line(complete('Conflicted',false,'generation_conflict')));stream.close()});await flush()
+assert.ok(!button('Retry saving'),'no retry on a generation conflict');assert.ok(button('Open in assistant'));assert.ok(document.querySelector('[role="alert"]'))
+await act(async()=>button('Open in assistant').click());assert.equal(opened,2)
+
+// (h) A retry that hits a 409 conflict hides Retry afterwards.
+await reset();await render();await flush()
+await act(async()=>{stream.enqueue(line(complete('Answer',false)));stream.close()});await flush()
+saveConflict=true;await act(async()=>button('Retry saving').click());await flush();saveConflict=false
+assert.ok(!button('Retry saving'),'retry hidden after a conflict');assert.ok(button('Open in assistant'));assert.match(document.querySelector('[role="alert"]').textContent,/cannot be saved/)
+
+// (i) A failed history load fails without asking the AI.
+await reset();failGet=true;await render();await flush();failGet=false
+assert.match(text(),/Incomplete — not saved/);assert.match(text(),/History unavailable/);assert.ok(button('Open in assistant'))
+assert.equal(requests.filter(r=>r.url==='/api/assistant').length,0)
 
 // (d) Unmount mid-stream aborts the request and ignores late deltas.
 await reset();await render();await flush()

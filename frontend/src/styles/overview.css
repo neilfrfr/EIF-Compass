@@ -199,6 +199,11 @@ progress::-moz-progress-bar {
   flex: 1 1 100%;
 }
 
+/* Collapsed keeps the explanation mounted, so reopening never starts a second request. */
+.explain-inline[hidden] {
+  display: none;
+}
+
 .explain-inline > *,
 .expand > * {
   min-height: 0;

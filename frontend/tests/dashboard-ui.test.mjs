@@ -63,9 +63,15 @@ assert.equal(destination,'work');assert.equal(recordId,'explain')
 await act(async()=>root.render(React.createElement(Dashboard,{client,role:'intern',userId:'a',cohortId:'c',revision:3,onNavigate(view){destination=view},onOpenAssistant(action){explained=action}})))
 assert.match(document.querySelector('.dashboard-next-action').textContent,/Suggested next step/)
 assert.ok(!document.querySelector('.explain-inline'))
-globalThis.fetch=()=>new Promise(()=>{})
+const asked=[]
+globalThis.fetch=async(url,options)=>{if(options.method==='GET')return Response.json({conversation:{id:'conv',generation:1,revision:0},turns:[],has_more:false,next_before:null});asked.push(url);const body=JSON.parse(options.body),turn={requestId:body.requestId,answer:'Start with the outline.'};return new Response(JSON.stringify({type:'complete',result:{...turn,generatedAt:'2026-10-20T12:00:00Z',truncated:false,sourceRefs:[],historySaved:true,turn,conversation:{id:'conv',generation:1,revision:1}}})+'\n',{headers:{'content-type':'application/x-ndjson'}})}
 client.auth={getSession:async()=>({data:{session:{access_token:'t'}},error:null})}
-await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Explain this').click())
+const explain=()=>act(async()=>{[...document.querySelectorAll('button')].find(b=>b.textContent==='Explain this').click();for(let i=0;i<8;i++)await new Promise(r=>setTimeout(r,0))})
+await explain()
 assert.ok(document.querySelector('.dashboard-next-action .explain-inline'),'explanation mounts inside the card')
+assert.match(document.querySelector('.explain-inline').textContent,/Saved to your assistant history/)
+await explain();assert.equal(document.querySelector('.explain-inline').hidden,true,'collapse hides without discarding')
+await explain();await explain();await explain()
+assert.equal(asked.length,1,'reopening never asks again');assert.match(document.querySelector('.explain-inline').textContent,/Start with the outline/)
 await act(async()=>root.unmount())
 console.log('PASS: database-backed role layouts, intern isolation, review queue, drill-down and navigation')
