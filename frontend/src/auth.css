@@ -1,12 +1,20 @@
-/* Deep Lagoon sign-in: static layout on theme tokens. Motion (logo, headline mask, journey drawing, shake) arrives in Task 11. */
+/* Deep Lagoon sign-in. Intro motion is CSS; the journey's pointer bend and the shake are driven from AuthGate.tsx. */
 
 .studio-login {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  position: relative;
   min-height: 100dvh;
   background: var(--canvas);
   color: var(--ink);
   transition: background-color 0.3s;
+}
+
+.studio-login-theme {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  z-index: 2;
 }
 
 /* Story panel */
@@ -19,8 +27,6 @@
   overflow: hidden;
   background: var(--story);
   color: var(--storyink);
-  /* The journey SVG in AuthGate.tsx fills its hollow nodes with this; Task 11 retires it. */
-  --brand-deep: var(--story);
 }
 
 .studio-login-story::before {
@@ -35,28 +41,52 @@
   pointer-events: none;
 }
 
-.studio-login-story::after {
-  content: "";
+/* Aurora: two slow-drifting blurred blobs behind the story */
+.studio-login-aurora {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.studio-login-aurora i {
   position: absolute;
   bottom: -160px;
   left: -120px;
-  z-index: -1;
   width: 520px;
   height: 420px;
   border-radius: 50%;
   background: var(--storyglow);
   filter: blur(80px);
-  pointer-events: none;
+  animation: story-drift 20s ease-in-out infinite alternate;
+}
+
+.studio-login-aurora i:nth-child(2) {
+  top: -120px;
+  right: -140px;
+  bottom: auto;
+  left: auto;
+  width: 420px;
+  height: 360px;
+  background: var(--storyaurora);
+  animation-duration: 26s;
+  animation-direction: alternate-reverse;
+}
+
+@keyframes story-drift {
+  to {
+    transform: translate(90px, -50px) scale(1.12);
+  }
 }
 
 .studio-login-brand {
   display: flex;
   align-items: center;
   gap: 12px;
+  animation: rise 0.8s var(--ease-out) 0.05s both;
 }
 
-.studio-login-brand img {
-  display: block;
+.studio-login-brand .compass-svg {
   width: 44px;
   height: 44px;
 }
@@ -81,9 +111,47 @@
   letter-spacing: -0.04em;
 }
 
+/* Each headline line rises out of its own mask */
+.studio-login-copy .ln {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.06em;
+}
+
+.studio-login-copy .ln > span {
+  display: inline-block;
+  animation: line-up 1s var(--ease-out) both;
+}
+
+.studio-login-copy .ln:nth-child(2) > span {
+  animation-delay: 0.12s;
+}
+
+.studio-login-copy .ln:nth-child(3) > span {
+  animation-delay: 0.24s;
+}
+
+@keyframes line-up {
+  from {
+    transform: translateY(105%);
+  }
+}
+
 .studio-login-copy h1 em {
   font-style: normal;
   color: var(--storyaccent);
+  background: var(--storysheen);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: sheen 8s linear 1.4s infinite;
+}
+
+@keyframes sheen {
+  to {
+    background-position: -300% 0;
+  }
 }
 
 .studio-login-copy p {
@@ -92,9 +160,10 @@
   color: var(--storymuted);
   font-size: 16px;
   line-height: 1.7;
+  animation: rise 0.9s var(--ease-out) 0.5s both;
 }
 
-/* Journey line: recolour the inline SVG through tokens */
+/* Journey line: draws itself while a light travels along it; nodes pop as the light arrives */
 .studio-login-journey {
   max-width: 580px;
   margin: 28px -10px 40px;
@@ -107,22 +176,94 @@
   overflow: visible;
 }
 
-.studio-login-journey path[stroke] {
+.journey-main,
+.journey-ghost {
   stroke: var(--path);
+  stroke-dasharray: 1;
+  animation: journey-draw 2.2s var(--ease-in-out) 0.7s both;
 }
 
-.studio-login-journey path:not([stroke]),
-.studio-login-journey circle {
+.journey-ghost {
+  opacity: 0.35;
+  animation-duration: 2.6s;
+  animation-delay: 0.9s;
+}
+
+@keyframes journey-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.journey-node,
+.journey-mark {
   fill: var(--node);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: node-pop 0.6s cubic-bezier(.34,1.56,.64,1) both;
 }
 
-.studio-login-journey circle[stroke] {
+.journey-node.is-hollow {
   fill: var(--story);
   stroke: var(--node);
 }
 
-.studio-login-journey circle:last-of-type {
+.journey-node.is-end,
+.journey-ping,
+.journey-light {
   fill: var(--node-end);
+}
+
+@keyframes node-pop {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+.journey-ping {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: node-ping 2.4s ease-out 3s infinite;
+}
+
+@keyframes node-ping {
+  from {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+}
+
+.journey-light {
+  filter: drop-shadow(0 0 6px var(--node-end));
+  offset-path: path("M20 152H168L276 44H530");
+  animation: journey-travel 2.2s var(--ease-in-out) 0.7s both;
+}
+
+@keyframes journey-travel {
+  from {
+    offset-distance: 0%;
+  }
+
+  to {
+    offset-distance: 100%;
+  }
+}
+
+/* After the intro, AuthGate positions the light with cx/cy */
+.is-live .journey-light {
+  offset-path: none;
+  animation: none;
 }
 
 .studio-login-journey > div {
@@ -132,6 +273,18 @@
   padding: 0 10px;
   color: var(--storymuted);
   font-size: 12px;
+}
+
+.studio-login-journey > div span {
+  animation: rise 0.7s var(--ease-out) 1s both;
+}
+
+.studio-login-journey > div span:nth-child(2) {
+  animation-delay: 1.6s;
+}
+
+.studio-login-journey > div span:nth-child(3) {
+  animation-delay: 2.4s;
 }
 
 .studio-login-story-footer {
@@ -168,6 +321,7 @@
   position: relative;
   width: 100%;
   max-width: 380px;
+  animation: rise 0.9s var(--ease-out) 0.35s both;
 }
 
 .studio-login-card h2 {
@@ -250,18 +404,60 @@
 }
 
 .studio-login-card .auth-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   margin: 0 0 16px;
+  animation: alert-in 0.35s var(--ease-out) both;
+}
+
+.studio-login-card .auth-error svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+@keyframes alert-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+    clip-path: inset(0 0 100% 0);
+  }
+
+  to {
+    clip-path: inset(0);
+  }
 }
 
 .studio-login-submit.primary-button {
+  position: relative;
   width: 100%;
   height: 44px;
+  overflow: hidden;
   font-size: 14px;
+  transition: background-color 0.2s, transform 0.16s var(--ease-out);
+}
+
+.studio-login-submit:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .studio-login-submit:disabled {
   cursor: default;
   opacity: 0.6;
+}
+
+/* Busy: stay at full strength and shimmer instead of dimming */
+form[aria-busy=true] .studio-login-submit:disabled {
+  cursor: progress;
+  opacity: 1;
+}
+
+form[aria-busy=true] .studio-login-submit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--onaccent) 25%, transparent) 50%, transparent 70%);
+  animation: shimmer 1s linear infinite;
 }
 
 .studio-login-card .studio-login-help {
@@ -285,7 +481,73 @@
   font-size: 12px;
 }
 
+/* Arrival: opens in a circle from the Sign in button over the already-rendered workspace, then fades */
+.arrival {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--canvas);
+  pointer-events: none;
+  clip-path: circle(0 at var(--sx) var(--sy));
+  animation: arrival-open 0.9s var(--ease-in-out) forwards, arrival-fade 0.45s var(--ease-out) 1.15s forwards;
+}
+
+.arrival::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--glow), transparent);
+  transform: translate(-50%, -50%);
+}
+
+.arrival > div {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  animation: rise 0.7s var(--ease-out) 0.45s both;
+}
+
+.arrival .compass-svg {
+  width: 64px;
+  height: 64px;
+}
+
+.arrival .compass-animate .needle {
+  animation-delay: 0.5s;
+}
+
+.arrival p {
+  margin: 0;
+  color: var(--strong);
+  font-size: 22px;
+  font-weight: 510;
+  letter-spacing: -0.03em;
+}
+
+@keyframes arrival-open {
+  to {
+    clip-path: circle(150vmax at var(--sx) var(--sy));
+  }
+}
+
+@keyframes arrival-fade {
+  to {
+    opacity: 0;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
+  .studio-login-brand:hover .compass-animate .needle {
+    animation: needle-settle 1.6s cubic-bezier(.34,1.56,.64,1) 0.2s both, needle-swing 1.2s cubic-bezier(.34,1.56,.64,1);
+  }
+
   .studio-login-password button:hover:not(:disabled) {
     background: var(--canvas);
     color: var(--strong);
@@ -319,7 +581,7 @@
     padding: 26px 24px;
   }
 
-  .studio-login-brand img {
+  .studio-login-brand .compass-svg {
     width: 36px;
     height: 36px;
   }
@@ -339,12 +601,15 @@
     line-height: 1.1;
   }
 
-  .studio-login-copy h1 br {
-    display: none;
+  /* One flowing sentence on mobile: the lines stay inline, so the headline rises as a whole */
+  .studio-login-copy h1 {
+    animation: rise 0.9s var(--ease-out) 0.1s both;
   }
 
-  .studio-login-copy h1 em::before {
-    content: " ";
+  .studio-login-copy .ln,
+  .studio-login-copy .ln > span {
+    display: inline;
+    animation: none;
   }
 
   .studio-login-copy p,
@@ -380,10 +645,31 @@
     position: static;
     margin-top: 32px;
   }
+
+  .studio-login-theme {
+    top: 20px;
+    right: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-login-aurora {
+    display: none;
+  }
 }
 
 @media (forced-colors: active) {
   .studio-login-card input {
     border: 1px solid CanvasText;
+  }
+
+  .studio-login-copy h1 em {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+
+  .studio-login-aurora,
+  .arrival {
+    display: none;
   }
 }

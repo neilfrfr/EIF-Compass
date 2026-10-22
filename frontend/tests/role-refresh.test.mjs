@@ -5,11 +5,11 @@ import React,{act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {JSDOM} from 'jsdom'
 mkdirSync('.test-output',{recursive:true})
-for(const name of ['assistant-history','Assistant','App','AuthGate','WorkManager','Dashboard','dashboard-model','data','SubmissionBin','submissions','GoogleCalendar','Agenda','InternFlows','DetailDrawer','motion','theme','ThemeToggle','CompassLogo','CommandPalette','shortcuts','StatusBadge','ExplainInline']){
-let content=ts.transpileModule(readFileSync(`src/${name}.${['assistant-history','data','dashboard-model','submissions','motion','theme','shortcuts'].includes(name)?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
+for(const name of ['assistant-history','Assistant','App','AuthGate','WorkManager','Dashboard','dashboard-model','data','SubmissionBin','submissions','GoogleCalendar','Agenda','InternFlows','DetailDrawer','motion','theme','ThemeToggle','CompassLogo','CommandPalette','shortcuts','StatusBadge','ExplainInline','journey']){
+let content=ts.transpileModule(readFileSync(`src/${name}.${['assistant-history','data','dashboard-model','submissions','motion','theme','shortcuts','journey'].includes(name)?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 content=content.replace("import './assistant.css';",'').replace("import './auth.css';",'')
 content=content.replaceAll("'./lib/supabase'","'./test-client.js'")
-for(const dep of ['assistant-history','Assistant','AuthGate','WorkManager','Dashboard','dashboard-model','data','SubmissionBin','submissions','GoogleCalendar','Agenda','InternFlows','DetailDrawer','motion','theme','ThemeToggle','CompassLogo','CommandPalette','shortcuts','StatusBadge','ExplainInline'])content=content.replaceAll(`'./${dep}'`,`'./${dep}.js'`)
+for(const dep of ['assistant-history','Assistant','AuthGate','WorkManager','Dashboard','dashboard-model','data','SubmissionBin','submissions','GoogleCalendar','Agenda','InternFlows','DetailDrawer','motion','theme','ThemeToggle','CompassLogo','CommandPalette','shortcuts','StatusBadge','ExplainInline','journey'])content=content.replaceAll(`'./${dep}'`,`'./${dep}.js'`)
 writeFileSync(`.test-output/${name}.js`,content)
 }
 let role='intern',fail=false,signOuts=0
