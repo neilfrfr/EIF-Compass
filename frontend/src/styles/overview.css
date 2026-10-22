@@ -665,10 +665,6 @@ progress::-moz-progress-bar {
     background: var(--hover);
   }
 
-  .dashboard-line:hover {
-    background: var(--hover);
-  }
-
   .row-glide {
     display: block;
   }
@@ -683,6 +679,7 @@ progress::-moz-progress-bar {
 /* useRowGlide stays out under reduced motion, so glided rows get a static hover instead. */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
   .dashboard-table tbody tr:hover,
+  .dashboard-line:hover,
   .work-row:hover,
   .submission-list > div:hover,
   .intern-flows > .flow-card:hover,
