@@ -230,7 +230,8 @@ progress::-moz-progress-bar {
   white-space: pre-wrap;
 }
 
-.explain-caret {
+.explain-caret,
+.stream-caret {
   display: inline-block;
   width: 2px;
   height: 1em;
