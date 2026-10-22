@@ -1,0 +1,920 @@
+/* Deep Lagoon work pages: WorkManager lists, filters and record forms, remove confirmation, SubmissionBin and DetailDrawer.
+   Shared page primitives (panel heading, actions, meta, notice, pill, fields) live here and are reused by flows.css and calendar.css. */
+
+/* Page panel heading */
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.panel-heading > div {
+  min-width: 0;
+}
+
+.panel-heading h2 {
+  margin: 0;
+  color: var(--strong);
+  font-size: 17px;
+  font-weight: 590;
+  line-height: 1.35;
+  letter-spacing: -0.018em;
+}
+
+.panel-heading p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.manager-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manager-meta {
+  margin: 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.manager-notice {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-btn);
+  background: var(--chip);
+  color: var(--accenttext);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.work-manager > .auth-error,
+.intern-flows > .auth-error,
+.agenda > .auth-error,
+.calendar-sync > .auth-error {
+  margin: 0 0 12px;
+}
+
+/* Neutral text pill; status text always travels with it */
+.data-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: var(--r-badge);
+  background: var(--surface2);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 510;
+  line-height: 1.5;
+  white-space: nowrap;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* Fields on work, flow and calendar pages (the drawer is portalled to body) */
+:is(.work-manager, .intern-flows, .detail-drawer, .calendar-sync) :is(input:not([type=checkbox], [type=radio], [type=file]), select, textarea) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--fieldline);
+  border-radius: var(--r-btn);
+  background: var(--field);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+}
+
+:is(.work-manager, .intern-flows, .detail-drawer, .calendar-sync) textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+:is(.work-manager, .intern-flows, .detail-drawer, .calendar-sync) :is(input, select, textarea):disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :is(.work-manager, .intern-flows, .detail-drawer, .calendar-sync) :is(input:not([type=checkbox], [type=radio], [type=file]), select, textarea):hover:not(:disabled, :focus-visible) {
+    border-color: var(--muted);
+  }
+}
+
+/* Record forms (drawer editor, project and flow editors) */
+.record-form {
+  margin: 12px 0;
+  padding: 18px 20px;
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.record-form:focus {
+  outline: none;
+}
+
+.record-form h3,
+.record-form h4 {
+  margin: 0 0 14px;
+  color: var(--strong);
+  font-size: 15px;
+  font-weight: 590;
+  line-height: 1.4;
+}
+
+.record-form fieldset {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.record-form label,
+.submission-fields label,
+.record-detail > label,
+.blocker-discussion label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 510;
+}
+
+.record-form label small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.record-form label {
+  align-content: start;
+}
+
+.record-form fieldset > button {
+  justify-self: start;
+  align-self: end;
+  min-height: 38px;
+}
+
+.record-form .manager-actions {
+  grid-column: 1 / -1;
+  padding-top: 4px;
+}
+
+.record-form > p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Filters */
+.filter-toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin: 0 0 12px;
+}
+
+.manager-search,
+.work-filters label,
+.filter-toolbar > label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 510;
+}
+
+.manager-search {
+  flex: 1 1 240px;
+  max-width: 360px;
+}
+
+.work-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.work-filters select,
+.filter-toolbar > label select {
+  min-width: 132px;
+}
+
+.filter-summary {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Record list */
+.manager-list {
+  display: grid;
+}
+
+.manager-list > p {
+  margin: 0;
+  padding: 24px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.work-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0 -10px;
+  padding: 12px 10px;
+  border-top: 1px solid var(--line);
+  border-radius: var(--r-btn);
+}
+
+.manager-list > .work-row:first-of-type {
+  border-top-color: transparent;
+}
+
+.work-row-main {
+  flex: 1 1 50%;
+  min-width: 0;
+}
+
+.work-row-main > p[role=status] {
+  margin: 4px 0 0;
+  color: var(--amber);
+  font-size: 12px;
+}
+
+.manager-record-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.manager-record-heading h3 {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-wrap: pretty;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 510;
+  line-height: 1.45;
+}
+
+.record-open {
+  display: block;
+  max-width: 100%;
+  min-height: 30px;
+  margin-left: -6px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: var(--r-btn);
+  background: transparent;
+  color: var(--strong);
+  font-size: 14px;
+  font-weight: 510;
+  line-height: 1.45;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+/* Completing a task (useCompletionFlash, 600ms): a check draws in and a strike sweeps the title, then both fade so nothing pops when the class drops. */
+.submission-list .complete-check {
+  position: static;
+  display: inline-block;
+  margin: 0 0 0 6px;
+  vertical-align: -2px;
+}
+
+.manager-record-heading,
+.dashboard-line.is-completing > div {
+  position: relative;
+}
+
+.complete-check {
+  position: absolute;
+  top: 50%;
+  left: -20px;
+  margin-top: -7px;
+  color: var(--accent);
+  animation: check-draw 0.6s var(--ease-out) both;
+}
+
+.work-row.is-completing .record-open,
+.dashboard-line.is-completing .record-link {
+  position: relative;
+}
+
+.work-row.is-completing .record-open::after,
+.dashboard-line.is-completing .record-link::after {
+  content: "";
+  position: absolute;
+  top: 55%;
+  right: 6px;
+  left: 6px;
+  height: 1px;
+  background: currentColor;
+  transform-origin: left;
+  animation: strike-sweep 0.6s var(--ease-out) both;
+}
+
+/* The filter no longer matches: slip away just before the row unmounts. */
+.work-row.is-leaving,
+.flow-card.is-leaving,
+.dashboard-line.is-leaving {
+  animation: row-leave 0.2s var(--ease-out) 0.35s both;
+}
+
+@keyframes check-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  50%,
+  85% {
+    clip-path: inset(0);
+    opacity: 1;
+  }
+
+  to {
+    clip-path: inset(0);
+    opacity: 0;
+  }
+}
+
+@keyframes strike-sweep {
+  from {
+    transform: scaleX(0);
+  }
+
+  55%,
+  85% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+
+  to {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+@keyframes row-leave {
+  to {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+/* A changed review state swaps in its new badge */
+.badge-swap {
+  display: inline-flex;
+  animation: badge-swap 0.24s var(--ease-out);
+}
+
+@keyframes badge-swap {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.record-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.record-status > span:first-child:not(.data-pill)::first-letter {
+  text-transform: uppercase;
+}
+
+.record-status select {
+  width: auto;
+  min-width: 140px;
+}
+
+.work-row > .manager-actions {
+  gap: 2px;
+}
+
+.work-row > .remove-confirmation {
+  flex: 0 0 100%;
+}
+
+/* Destructive actions and confirmations */
+.text-button.danger-button {
+  color: var(--red);
+}
+
+.primary-button.danger-button {
+  background: var(--red);
+  color: var(--onaccent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--red) 70%, var(--btn-edge)), var(--btn-hi);
+}
+
+.remove-confirmation,
+.drawer-discard {
+  margin: 4px 0;
+  padding: 14px 16px;
+  border-radius: var(--r-card);
+  background: var(--redbg);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--red) 28%, transparent);
+}
+
+.remove-confirmation h4 {
+  margin: 0 0 4px;
+  color: var(--strong);
+  font-size: 14px;
+  font-weight: 590;
+  overflow-wrap: anywhere;
+}
+
+.remove-confirmation p,
+.drawer-discard p {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.remove-confirmation > button + button {
+  margin-left: 8px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .text-button.danger-button:hover:not(:disabled) {
+    background: var(--redbg);
+  }
+
+  .primary-button.danger-button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--red) 86%, var(--btn-edge));
+  }
+
+  .remove-confirmation .text-button:not(.danger-button):hover:not(:disabled),
+  .drawer-discard .text-button:hover:not(:disabled) {
+    background: var(--surface);
+  }
+}
+
+/* Detail drawer: slides in from the right over a blurred scrim; DetailDrawer waits for the 200ms exit before unmounting. */
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detail-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: scrim-in 0.28s var(--ease-out);
+}
+
+.detail-drawer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(640px, 94vw);
+  height: 100dvh;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: -1px 0 0 var(--line), var(--shadow-pop);
+  animation: drawer-in 0.28s var(--ease-out);
+}
+
+.detail-overlay.is-closing {
+  pointer-events: none;
+}
+
+.detail-overlay.is-closing::before {
+  animation: scrim-out 0.2s var(--ease-out) forwards;
+}
+
+.detail-overlay.is-closing .detail-drawer {
+  animation: drawer-out 0.2s var(--ease-out) forwards;
+}
+
+.detail-drawer:focus {
+  outline: none;
+}
+
+.detail-overlay .detail-drawer[data-keyboard=true] {
+  animation: none;
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes drawer-out {
+  from {
+    transform: var(--drawer-from, none);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes scrim-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.detail-header h2 {
+  min-width: 0;
+  margin: 0;
+  color: var(--strong);
+  font-size: 18px;
+  font-weight: 590;
+  line-height: 1.35;
+  letter-spacing: -0.018em;
+  overflow-wrap: anywhere;
+}
+
+.detail-header .text-button {
+  flex-shrink: 0;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.detail-body {
+  flex: 1;
+  padding: 22px 24px 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.detail-body .record-form {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.detail-body fieldset {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.drawer-discard {
+  position: relative;
+  z-index: 1;
+  margin: 12px 24px 0;
+}
+
+.record-detail > p {
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+.record-detail > .record-description {
+  margin: 14px 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.record-detail > .data-pill {
+  margin-top: 10px;
+}
+
+.record-detail > label {
+  max-width: 240px;
+  margin-top: 16px;
+}
+
+.record-detail > .auth-error,
+.record-detail > p[role=status] {
+  margin-top: 12px;
+}
+
+.submission-list h4 {
+  margin: 20px 0 4px;
+  color: var(--strong);
+  font-size: 14px;
+  font-weight: 590;
+}
+
+.submission-list > div {
+  padding-top: 14px;
+}
+
+.submission-list > div + div {
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.submission-list > div > strong {
+  color: var(--strong);
+  font-size: 14px;
+  font-weight: 590;
+}
+
+.submission-list > p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Submission bin */
+.submission-bin {
+  margin-top: 16px;
+  padding: 16px 0 4px;
+  border-top: 1px solid var(--line);
+}
+
+.submission-bin .dashboard-section-head {
+  margin-bottom: 8px;
+}
+
+.submission-bin h4 {
+  margin: 0;
+  color: var(--strong);
+  font-size: 14px;
+  font-weight: 590;
+}
+
+.submission-bin > p {
+  margin: 6px 0;
+  font-size: 13px;
+}
+
+.submission-bin > p.manager-meta {
+  font-size: 12px;
+}
+
+.submission-fields {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.submission-fields > p.manager-meta {
+  margin-top: -8px;
+}
+
+.submission-fields input[type=file] {
+  max-width: 100%;
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.submission-fields input[type=file]::file-selector-button {
+  margin-right: 10px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--r-btn);
+  background: var(--chip);
+  color: var(--accenttext);
+  font: inherit;
+  font-weight: 510;
+  box-shadow: inset 0 0 0 1px var(--line);
+  cursor: pointer;
+  transition: background-color 0.2s var(--ease-out);
+}
+
+.submission-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.submission-bin a {
+  overflow-wrap: anywhere;
+}
+
+.submission-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.submission-row > span {
+  flex: 1 1 200px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.submission-actions {
+  margin-top: 16px;
+}
+
+.submission-actions .text-button {
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.submission-list .submission-bin {
+  margin-top: 8px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .submission-fields input[type=file]:not(:disabled)::file-selector-button:hover {
+    background: var(--hover);
+  }
+}
+
+/* Breakpoints */
+@media (max-width: 767px) {
+  .panel-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .filter-toolbar {
+    align-items: stretch;
+  }
+
+  .manager-search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .work-filters {
+    width: 100%;
+  }
+
+  .work-filters label {
+    width: calc(50% - 5px);
+  }
+
+  .work-filters select,
+  .filter-toolbar > label select {
+    min-width: 0;
+  }
+
+  :is(.work-manager, .intern-flows, .detail-drawer, .calendar-sync) :is(input:not([type=checkbox], [type=radio], [type=file]), select) {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  :is(.work-manager, .intern-flows, .detail-drawer, .calendar-sync) textarea {
+    font-size: 16px;
+  }
+
+  .work-row {
+    gap: 6px 12px;
+  }
+
+  .work-row-main {
+    flex-basis: 100%;
+  }
+
+  .record-status {
+    width: 100%;
+  }
+
+  .record-status select {
+    flex: 1;
+    min-width: 0;
+    max-width: 240px;
+  }
+
+  .record-open {
+    min-height: 44px;
+  }
+
+  .record-form {
+    padding: 16px;
+  }
+
+  .record-form fieldset {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detail-drawer {
+    width: 100vw;
+  }
+
+  .detail-header {
+    padding: 14px 16px;
+  }
+
+  .detail-header h2 {
+    font-size: 17px;
+  }
+
+  .detail-body {
+    padding: 18px 16px 24px;
+  }
+
+  .drawer-discard {
+    margin: 12px 16px 0;
+  }
+
+  .submission-fields input[type=file]::file-selector-button {
+    min-height: 44px;
+  }
+}
+
+/* Touch targets: beat base.css's 34px `.panel button:not([class])` and the 38px fieldset buttons */
+@media (max-width: 767px), (pointer: coarse) {
+  .panel button:not([class]),
+  .record-form fieldset > button,
+  .record-open,
+  .submission-fields input[type=file]::file-selector-button {
+    min-height: 44px;
+  }
+}
+
+@media (forced-colors: active) {
+  .record-form,
+  .remove-confirmation,
+  .drawer-discard,
+  .data-pill,
+  .detail-drawer {
+    border: 1px solid CanvasText;
+  }
+}
+
+/* Busy button: a light sweep while its action is saving (transform only) */
+.is-busy {
+  position: relative;
+  overflow: hidden;
+}
+
+.is-busy::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--onaccent) 25%, transparent) 50%, transparent 70%);
+  animation: shimmer 1s linear infinite;
+}
+
+.text-button.is-busy::after {
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--accent) 22%, transparent) 50%, transparent 70%);
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* A newly posted card slides into the top of its list */
+.flow-enter {
+  animation: flow-enter 0.4s var(--ease-out);
+}
+
+@keyframes flow-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}

@@ -1,0 +1,372 @@
+/* Deep Lagoon calendar: the fellowship Agenda and the Google Calendar sync panel. Shared primitives come from work.css. */
+
+.calendar-action {
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.calendar-action .text-button {
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.calendar-action .text-button[aria-expanded=true] {
+  background: var(--chip);
+  color: var(--accenttext);
+}
+
+.agenda ~ .panel {
+  margin-top: 16px;
+}
+
+/* The event manager and Google sync panels open with a downward reveal */
+.agenda ~ .panel {
+  animation: panel-reveal 0.4s var(--ease-out);
+}
+
+@keyframes panel-reveal {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(-6px);
+  }
+}
+
+/* Agenda: day groups stagger in; each carries a date tile, and today's is accented */
+.agenda-day {
+  animation: rise 0.6s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+.agenda-day + .agenda-day {
+  margin-top: 20px;
+}
+
+.agenda-day > h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 510;
+  letter-spacing: 0.01em;
+}
+
+.date-tile {
+  flex: none;
+  width: 40px;
+  padding: 4px 0;
+  border-radius: var(--r-btn);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.3;
+  text-align: center;
+  text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.date-tile b {
+  display: block;
+  color: var(--strong);
+  font-size: 16px;
+  font-weight: 510;
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-today > h3 {
+  color: var(--accenttext);
+  font-weight: 590;
+}
+
+.agenda-today .date-tile {
+  background: var(--chip);
+  color: var(--accenttext);
+  box-shadow: inset 0 0 0 1px var(--nbaline);
+}
+
+.agenda-today .date-tile b {
+  color: var(--accenttext);
+}
+
+.agenda-list article {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 16px;
+  margin: 0 -10px;
+  padding: 12px 10px;
+  border-top: 1px solid var(--line);
+  border-radius: var(--r-btn);
+}
+
+.agenda-list time {
+  padding-top: 1px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 510;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.agenda-list article > div {
+  min-width: 0;
+}
+
+.agenda-list h4 {
+  margin: 6px 0 2px;
+  color: var(--strong);
+  font-size: 14px;
+  font-weight: 510;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.agenda-list p {
+  margin: 2px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.agenda-kind {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: var(--r-badge);
+  background: var(--chip);
+  color: var(--accenttext);
+  font-size: 11px;
+  font-weight: 510;
+  line-height: 1.6;
+}
+
+.agenda-kind.agenda-deadline {
+  background: var(--amberbg);
+  color: var(--amber);
+}
+
+/* Google Calendar sync */
+.calendar-sync .dashboard-section-head {
+  margin-bottom: 4px;
+}
+
+.calendar-sync h2 {
+  margin: 0;
+  color: var(--strong);
+  font-size: 17px;
+  font-weight: 590;
+  line-height: 1.35;
+  letter-spacing: -0.018em;
+}
+
+.calendar-sync > p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.calendar-sync > .manager-actions > span {
+  margin-right: 4px;
+  color: var(--ink);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.calendar-sync > .remove-confirmation {
+  margin: 12px 0;
+}
+
+.calendar-sync h3 {
+  margin: 0 0 6px;
+  color: var(--strong);
+  font-size: 15px;
+  font-weight: 590;
+}
+
+.calendar-selection {
+  display: grid;
+  margin-top: 14px;
+}
+
+.calendar-selection label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 -10px;
+  padding: 10px;
+  border-top: 1px solid var(--line);
+  border-radius: var(--r-btn);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.calendar-selection label:first-of-type {
+  border-top-color: transparent;
+}
+
+.calendar-selection input {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  border: 1px solid var(--fieldline);
+  border-radius: var(--r-badge);
+  background: var(--field);
+  cursor: pointer;
+  appearance: none;
+  transition: background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+}
+
+.calendar-selection input::before {
+  content: "";
+  width: 5px;
+  height: 9px;
+  margin-top: -2px;
+  border: solid var(--onaccent);
+  border-width: 0 2px 2px 0;
+  opacity: 0;
+  transform: rotate(45deg);
+}
+
+.calendar-selection input:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.calendar-selection input:checked::before {
+  opacity: 1;
+}
+
+.calendar-selection input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.calendar-selection input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.calendar-selection label > span {
+  min-width: 0;
+}
+
+.calendar-selection strong {
+  color: var(--strong);
+  font-weight: 510;
+  overflow-wrap: anywhere;
+}
+
+.calendar-selection small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.calendar-selection > .primary-button {
+  justify-self: start;
+  margin-top: 12px;
+}
+
+.calendar-selection > p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.calendar-review {
+  margin-top: 14px;
+}
+
+.calendar-review article {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.calendar-review strong {
+  color: var(--strong);
+  font-weight: 510;
+  overflow-wrap: anywhere;
+}
+
+.calendar-review p {
+  margin: 2px 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.calendar-review article p {
+  margin-bottom: 0;
+}
+
+.calendar-sync > [role=status] {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.calendar-sync > div[role=status] {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.calendar-sync > div[role=status] p {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .calendar-selection label:hover,
+  .calendar-selection label:hover + label {
+    border-top-color: transparent;
+  }
+}
+
+@media (forced-colors: active) {
+  .date-tile {
+    border: 1px solid CanvasText;
+  }
+
+  .calendar-selection input {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .calendar-selection input::before {
+    border-color: HighlightText;
+  }
+
+  .calendar-selection input:checked {
+    border-color: Highlight;
+    background: Highlight;
+  }
+}
+
+@media (pointer: coarse) {
+  .calendar-selection label {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 767px) {
+  .agenda-list article {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .calendar-selection label {
+    min-height: 44px;
+  }
+
+  .calendar-selection input {
+    width: 20px;
+    height: 20px;
+  }
+}

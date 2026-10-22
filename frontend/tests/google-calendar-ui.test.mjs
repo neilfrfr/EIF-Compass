@@ -5,7 +5,7 @@ import React,{act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {JSDOM} from 'jsdom'
 mkdirSync('.test-output',{recursive:true});let Calendar
-try{writeFileSync('.test-output/GoogleCalendar.js',ts.transpileModule(readFileSync('src/GoogleCalendar.tsx','utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText);Calendar=(await import('../.test-output/GoogleCalendar.js')).default}catch{}
+try{for(const [name,ext] of [['GoogleCalendar','tsx'],['motion','ts']])writeFileSync(`.test-output/${name}.js`,ts.transpileModule(readFileSync(`src/${name}.${ext}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replaceAll("'./motion'","'./motion.js'"));Calendar=(await import('../.test-output/GoogleCalendar.js')).default}catch{}
 assert.equal(typeof Calendar,'function','Google Calendar component must exist')
 const dom=new JSDOM('<div id="root"></div>',{url:'https://compass.test'});Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true})
 const root=createRoot(document.getElementById('root'));const writes=[]

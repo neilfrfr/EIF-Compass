@@ -1,0 +1,100 @@
+/* Deep Lagoon interaction accents: pointer-only row and control hovers, and the click bubbles from interaction-effects.ts. */
+
+.work-row,
+.flow-card,
+.agenda-list article,
+.record-open,
+.flow-tabs button {
+  transition: background-color 0.2s var(--ease-out), border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), color 0.2s var(--ease-out);
+}
+
+.assistant-starters button {
+  transition: transform 0.25s var(--ease-out), background-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .work-row:hover,
+  .intern-flows .flow-card:not(.flow-unread):hover,
+  .agenda-list article:hover {
+    background: var(--hover);
+    transition-delay: 60ms;
+  }
+
+  .work-row:hover,
+  .work-row:hover + .work-row,
+  .intern-flows .flow-card:hover,
+  .intern-flows .flow-card:hover + .flow-card,
+  .agenda-list article:hover,
+  .agenda-list article:hover + article {
+    border-top-color: transparent;
+  }
+
+  .record-open:hover {
+    background: var(--chip);
+    color: var(--accenttext);
+  }
+
+  .panel .flow-tabs button:not([aria-pressed=true]):hover {
+    background: var(--hover);
+    color: var(--ink);
+  }
+
+  .assistant .assistant-starters button:hover:not(:disabled) {
+    background: var(--hover);
+    box-shadow: inset 0 0 0 1px var(--fieldline), var(--shadow);
+    transform: translateY(-2px);
+    transition-delay: 60ms;
+  }
+
+  .assistant .assistant-starters button:active:not(:disabled):not(:focus-visible) {
+    transform: translateY(0) scale(0.97);
+    transition-duration: 0.1s;
+    transition-delay: 0s;
+  }
+}
+
+.assistant-starters button:focus-visible {
+  transform: none;
+}
+
+/* Click bubbles: spawned by interaction-effects.ts on deliberate primary actions */
+.action-bubbles {
+  position: fixed;
+  z-index: 100;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.action-bubble {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--path);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.action-bubble:nth-child(2n) {
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--accent);
+  background: var(--canvas);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-bubbles {
+    display: none;
+  }
+
+  .assistant-starters button {
+    transform: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .action-bubbles {
+    display: none;
+  }
+}

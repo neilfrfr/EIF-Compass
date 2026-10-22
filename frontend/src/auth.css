@@ -1,4 +1,675 @@
-.studio-login{min-height:100dvh;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);background:#f4f8f6;color:#203f43}.studio-login-story{background:#245862;color:#f4faf7;padding:48px clamp(32px,5vw,80px);display:flex;flex-direction:column;overflow:hidden}.studio-login-brand{display:flex;align-items:center;gap:12px}.studio-login-brand img{background:#deeee7;border-radius:12px;padding:6px}.studio-login-brand strong{font:750 24px/1.2 'Manrope',sans-serif;letter-spacing:-.03em}.studio-login-copy{margin:auto 0 0;padding-top:80px;position:relative}.studio-login-copy h1{font:600 clamp(40px,4.3vw,68px)/1.1 'Manrope',sans-serif;letter-spacing:-.035em;margin:0 0 24px}.studio-login-copy h1 em{font-style:normal;color:#a9d4c5}.studio-login-copy p{font-size:16px;line-height:1.75;max-width:35ch;color:#d9ede6;margin:0}.studio-login-journey{margin:20px -12px 44px;max-width:590px}.studio-login-journey svg{width:100%;height:auto;display:block}.studio-login-journey>div{display:flex;justify-content:space-between;gap:12px;padding:0 12px;font-size:11px;color:#d9ede6}.studio-login-story-footer{font-size:12px;color:#d9ede6;letter-spacing:.02em;margin-top:auto}.studio-login-form-area{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:64px 40px;position:relative}.studio-login-card{width:100%;max-width:380px}.studio-login-card h2{font:700 clamp(30px,3vw,40px)/1.2 'Manrope',sans-serif;letter-spacing:-.035em;margin:0 0 12px}.studio-login-card>p{font-size:15px;line-height:1.7;color:#526d70;margin:0}.studio-login-card form{display:flex;flex-direction:column;margin-top:36px}.studio-login-card label{font-size:13px;font-weight:650;margin-bottom:9px}.studio-login-card input{width:100%;min-width:0;min-height:52px;border:1px solid #b7ccc5;border-radius:9px;padding:13px 14px;background:#fff;color:#203f43;font:inherit;font-size:15px;margin-bottom:24px;caret-color:#176f70}.studio-login-card input::placeholder{color:#617775}.studio-login-card input:focus-visible{outline:2px solid #176f70;outline-offset:3px}.studio-login-password{display:flex;border:1px solid #b7ccc5;border-radius:9px;background:#fff;margin-bottom:24px}.studio-login-password:focus-within{outline:2px solid #176f70;outline-offset:3px}.studio-login-password input{border:0;margin:0;background:transparent;padding-right:4px}.studio-login-password input:focus-visible{outline:0}.studio-login-password button{border:0;border-radius:8px;background:transparent;min-width:58px;padding:8px;color:#176f70;font-size:12px;font-weight:650}.studio-login-submit.primary-button{height:52px;font-size:14px;justify-content:space-between;border-radius:9px;padding:14px 18px;background:#176f70;box-shadow:none}.studio-login-submit:disabled{opacity:.6;cursor:default}.studio-login-card .auth-error{font-size:13px;line-height:1.6;padding:12px;margin:0 0 20px}.studio-login-card .studio-login-help{margin-top:30px;padding-top:24px;border-top:1px solid #d7e5e2;font-size:13px;line-height:1.8;color:#526d70}.studio-login-help strong{font-weight:600;color:#245862}.studio-login-footer{font-size:12px;color:#526d70;position:absolute;bottom:32px}.studio-login-checking{min-height:100dvh;display:grid;place-items:center;background:#f4f8f6;color:#176f70}
-@media(hover:hover) and (pointer:fine){.studio-login-submit.primary-button:hover{background:#105b5e;transform:none}.studio-login-password button:hover{background:#edf5f1}}
-@media(max-width:1000px){.studio-login-story{padding:36px}.studio-login-copy h1{font-size:44px}.studio-login-copy{padding-top:70px}.studio-login-form-area{padding:48px 32px}}
-@media(max-width:760px){.studio-login{grid-template-columns:1fr;min-height:100dvh}.studio-login-story{padding:26px 24px}.studio-login-brand strong{font-size:20px}.studio-login-brand img{width:36px;height:36px}.studio-login-copy{padding-top:26px}.studio-login-copy h1{font-size:32px;max-width:20ch;margin-bottom:0}.studio-login-copy h1 br{display:none}.studio-login-copy h1 em{display:inline}.studio-login-copy h1 em:before{content:' '}.studio-login-copy p,.studio-login-journey,.studio-login-story-footer{display:none}.studio-login-form-area{padding:32px 24px}.studio-login-card h2{font-size:28px}.studio-login-card form{margin-top:24px}.studio-login-footer{position:static;margin-top:32px}.studio-login-card .studio-login-help{margin-top:24px}}
+/* Deep Lagoon sign-in. Intro motion is CSS; the journey's pointer bend and the shake are driven from AuthGate.tsx. */
+
+.studio-login {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  position: relative;
+  min-height: 100dvh;
+  background: var(--canvas);
+  color: var(--ink);
+  transition: background-color 0.3s;
+}
+
+.studio-login-theme {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  z-index: 2;
+}
+
+/* Story panel */
+.studio-login-story {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  padding: 44px clamp(32px, 5vw, 76px);
+  overflow: hidden;
+  background: var(--story);
+  color: var(--storyink);
+}
+
+.studio-login-story::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: linear-gradient(var(--storygrid) 1px, transparent 1px), linear-gradient(90deg, var(--storygrid) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse at 30% 70%, black 10%, transparent 70%);
+  mask-image: radial-gradient(ellipse at 30% 70%, black 10%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Aurora: two slow-drifting blurred blobs behind the story */
+.studio-login-aurora {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.studio-login-aurora i {
+  position: absolute;
+  bottom: -160px;
+  left: -120px;
+  width: 520px;
+  height: 420px;
+  border-radius: 50%;
+  background: var(--storyglow);
+  filter: blur(80px);
+  animation: story-drift 20s ease-in-out infinite alternate;
+}
+
+.studio-login-aurora i:nth-child(2) {
+  top: -120px;
+  right: -140px;
+  bottom: auto;
+  left: auto;
+  width: 420px;
+  height: 360px;
+  background: var(--storyaurora);
+  animation-duration: 26s;
+  animation-direction: alternate-reverse;
+}
+
+@keyframes story-drift {
+  to {
+    transform: translate(90px, -50px) scale(1.12);
+  }
+}
+
+.studio-login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: rise 0.8s var(--ease-out) 0.05s both;
+}
+
+.studio-login-brand .compass-svg {
+  width: 44px;
+  height: 44px;
+}
+
+.studio-login-brand strong {
+  font-size: 21px;
+  font-weight: 590;
+  letter-spacing: -0.035em;
+}
+
+.studio-login-copy {
+  margin: auto 0 0;
+  padding-top: 72px;
+}
+
+.studio-login-copy h1 {
+  margin: 0 0 22px;
+  color: var(--storyink);
+  font-size: clamp(40px, 4.4vw, 66px);
+  font-weight: 510;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+
+/* Each headline line rises out of its own mask */
+.studio-login-copy .ln {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.06em;
+}
+
+.studio-login-copy .ln > span {
+  display: inline-block;
+  animation: line-up 1s var(--ease-out) both;
+}
+
+.studio-login-copy .ln:nth-child(2) > span {
+  animation-delay: 0.12s;
+}
+
+.studio-login-copy .ln:nth-child(3) > span {
+  animation-delay: 0.24s;
+}
+
+@keyframes line-up {
+  from {
+    transform: translateY(105%);
+  }
+}
+
+.studio-login-copy h1 em {
+  font-style: normal;
+  color: var(--storyaccent);
+  background: var(--storysheen);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: sheen 8s linear 1.4s infinite;
+}
+
+@keyframes sheen {
+  to {
+    background-position: -300% 0;
+  }
+}
+
+.studio-login-copy p {
+  max-width: 36ch;
+  margin: 0;
+  color: var(--storymuted);
+  font-size: 16px;
+  line-height: 1.7;
+  animation: rise 0.9s var(--ease-out) 0.5s both;
+}
+
+/* Journey line: draws itself while a light travels along it; nodes pop as the light arrives */
+.studio-login-journey {
+  max-width: 580px;
+  margin: 28px -10px 40px;
+}
+
+.studio-login-journey svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.journey-main,
+.journey-ghost {
+  stroke: var(--path);
+  stroke-dasharray: 1;
+  animation: journey-draw 2.2s var(--ease-in-out) 0.7s both;
+}
+
+.journey-ghost {
+  opacity: 0.35;
+  animation-duration: 2.6s;
+  animation-delay: 0.9s;
+}
+
+@keyframes journey-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.journey-node,
+.journey-mark {
+  fill: var(--node);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: node-pop 0.6s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+.journey-node.is-hollow {
+  fill: var(--story);
+  stroke: var(--node);
+}
+
+.journey-node.is-end,
+.journey-ping,
+.journey-light {
+  fill: var(--node-end);
+}
+
+@keyframes node-pop {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+.journey-ping {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: node-ping 2.4s ease-out 3s infinite;
+}
+
+@keyframes node-ping {
+  from {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+}
+
+.journey-light {
+  filter: drop-shadow(0 0 6px var(--node-end));
+  offset-path: path("M20 152H168L276 44H530");
+  animation: journey-travel 2.2s var(--ease-in-out) 0.7s both;
+}
+
+@keyframes journey-travel {
+  from {
+    offset-distance: 0%;
+  }
+
+  to {
+    offset-distance: 100%;
+  }
+}
+
+/* After the intro, AuthGate positions the light with cx/cy */
+.is-live .journey-light {
+  offset-path: none;
+  animation: none;
+}
+
+.studio-login-journey > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 10px;
+  color: var(--storymuted);
+  font-size: 12px;
+}
+
+.studio-login-journey > div span {
+  animation: rise 0.7s var(--ease-out) 1s both;
+}
+
+.studio-login-journey > div span:nth-child(2) {
+  animation-delay: 1.6s;
+}
+
+.studio-login-journey > div span:nth-child(3) {
+  animation-delay: 2.4s;
+}
+
+.studio-login-story-footer {
+  margin-top: auto;
+  color: var(--storymuted);
+  font-size: 12px;
+}
+
+/* Form */
+.studio-login-form-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 40px;
+  overflow: hidden;
+}
+
+.studio-login-form-area::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--glow), transparent);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.studio-login-card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  animation: rise 0.9s var(--ease-out) 0.35s both;
+}
+
+.studio-login-card h2 {
+  margin: 0 0 8px;
+  color: var(--strong);
+  font-size: 34px;
+  font-weight: 510;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+
+.studio-login-card > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.studio-login-card form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 30px;
+}
+
+.studio-login-card label {
+  margin: 0 0 7px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 510;
+}
+
+.studio-login-card input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  margin-bottom: 18px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-btn);
+  background: var(--field);
+  color: var(--strong);
+  font-size: 14px;
+  box-shadow: inset 0 0 0 1px var(--fieldline);
+  transition: box-shadow 0.2s var(--ease-out);
+}
+
+.studio-login-card input::placeholder {
+  color: var(--muted);
+}
+
+.studio-login-card input:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 4px var(--glow);
+}
+
+.studio-login-card input:disabled {
+  opacity: 0.7;
+}
+
+.studio-login-password {
+  position: relative;
+  margin-bottom: 18px;
+}
+
+.studio-login-password input {
+  margin: 0;
+  padding-right: 64px;
+}
+
+.studio-login-password button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-badge);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.studio-login-card .auth-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 16px;
+  animation: alert-in 0.35s var(--ease-out) both;
+}
+
+.studio-login-card .auth-error svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+@keyframes alert-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+    clip-path: inset(0 0 100% 0);
+  }
+
+  to {
+    clip-path: inset(0);
+  }
+}
+
+.studio-login-submit.primary-button {
+  position: relative;
+  width: 100%;
+  height: 44px;
+  overflow: hidden;
+  font-size: 14px;
+  transition: background-color 0.2s, transform 0.16s var(--ease-out);
+}
+
+.studio-login-submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.studio-login-submit:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* Busy: stay at full strength and shimmer instead of dimming */
+form[aria-busy=true] .studio-login-submit:disabled {
+  cursor: progress;
+  opacity: 1;
+}
+
+form[aria-busy=true] .studio-login-submit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--onaccent) 25%, transparent) 50%, transparent 70%);
+  animation: shimmer 1s linear infinite;
+}
+
+.studio-login-card .studio-login-help {
+  margin: 26px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.studio-login-help strong {
+  color: var(--strong);
+  font-weight: 510;
+}
+
+.studio-login-footer {
+  position: absolute;
+  bottom: 24px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Arrival: opens in a circle from the Sign in button over the already-rendered workspace, then fades */
+.arrival {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--canvas);
+  pointer-events: none;
+  clip-path: circle(0 at var(--sx) var(--sy));
+  animation: arrival-open 0.9s var(--ease-in-out) forwards, arrival-fade 0.45s var(--ease-out) 1.15s forwards;
+}
+
+.arrival::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--glow), transparent);
+  transform: translate(-50%, -50%);
+}
+
+.arrival > div {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  animation: rise 0.7s var(--ease-out) 0.45s both;
+}
+
+.arrival .compass-svg {
+  width: 64px;
+  height: 64px;
+}
+
+.arrival .compass-animate .needle {
+  animation-delay: 0.5s;
+}
+
+.arrival p {
+  margin: 0;
+  color: var(--strong);
+  font-size: 22px;
+  font-weight: 510;
+  letter-spacing: -0.03em;
+}
+
+@keyframes arrival-open {
+  to {
+    clip-path: circle(150vmax at var(--sx) var(--sy));
+  }
+}
+
+@keyframes arrival-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .studio-login-brand:hover .compass-animate .needle {
+    animation: needle-settle 1.6s cubic-bezier(.34,1.56,.64,1) 0.2s both, needle-swing 1.2s cubic-bezier(.34,1.56,.64,1);
+  }
+
+  .studio-login-password button:hover:not(:disabled) {
+    background: var(--canvas);
+    color: var(--strong);
+  }
+}
+
+@media (max-width: 900px) {
+  .studio-login-story {
+    padding: 36px;
+  }
+
+  .studio-login-copy {
+    padding-top: 64px;
+  }
+
+  .studio-login-copy h1 {
+    font-size: 44px;
+  }
+
+  .studio-login-form-area {
+    padding: 48px 32px;
+  }
+}
+
+@media (max-width: 767px) {
+  .studio-login {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-login-story {
+    padding: 26px 24px;
+  }
+
+  .studio-login-brand .compass-svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .studio-login-brand strong {
+    font-size: 20px;
+  }
+
+  .studio-login-copy {
+    padding-top: 26px;
+  }
+
+  .studio-login-copy h1 {
+    max-width: 20ch;
+    margin-bottom: 0;
+    font-size: 32px;
+    line-height: 1.1;
+  }
+
+  /* One flowing sentence on mobile: the lines stay inline, so the headline rises as a whole */
+  .studio-login-copy h1 {
+    animation: rise 0.9s var(--ease-out) 0.1s both;
+  }
+
+  .studio-login-copy .ln,
+  .studio-login-copy .ln > span {
+    display: inline;
+    animation: none;
+  }
+
+  .studio-login-copy p,
+  .studio-login-journey,
+  .studio-login-story-footer {
+    display: none;
+  }
+
+  .studio-login-form-area {
+    padding: 32px 24px;
+  }
+
+  .studio-login-card h2 {
+    font-size: 28px;
+  }
+
+  .studio-login-card form {
+    margin-top: 24px;
+  }
+
+  .studio-login-card input {
+    height: 48px;
+  }
+
+  .studio-login-password button {
+    top: 2px;
+    right: 2px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .studio-login-footer {
+    position: static;
+    margin-top: 32px;
+  }
+
+  .studio-login-theme {
+    top: 20px;
+    right: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-login-aurora {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .studio-login-card input {
+    border: 1px solid CanvasText;
+  }
+
+  .studio-login-copy h1 em {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+
+  .studio-login-aurora,
+  .arrival {
+    display: none;
+  }
+}

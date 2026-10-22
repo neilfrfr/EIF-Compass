@@ -1,12 +1,13 @@
-import {requirementState,requirementLabels} from '../../shared/workflow-rules.mjs'
+import {requirementState} from '../../shared/workflow-rules.mjs'
 import {useEffect,useRef,useState} from 'react'
 import type {SupabaseClient} from '@supabase/supabase-js'
 import {canEditSubmission,submissionCutoff,submissionLinks,validSubmissionLink,validateAttachment} from './submissions'
 import type {SubmissionRow,SubmissionRequirement} from './submissions'
+import StatusBadge from './StatusBadge'
 type Attachment={id:string;name:string;object_path:string;size:number;uploaded:boolean}
-type Props={client:SupabaseClient;role:string;userId:string;requirement:SubmissionRequirement&{id:string};submission?:SubmissionRow;onChanged:()=>void;onDirtyChange?:(dirty:boolean)=>void;onBusyChange?:(busy:boolean)=>void}
+type Props={client:SupabaseClient;role:string;userId:string;requirement:SubmissionRequirement&{id:string};submission?:SubmissionRow;onChanged:(status?:string)=>void;onDirtyChange?:(dirty:boolean)=>void;onBusyChange?:(busy:boolean)=>void}
 export default function SubmissionBin({client,role,userId,requirement,submission,onChanged,onDirtyChange,onBusyChange}:Props){
- const changed=useRef(false)
+ const changed=useRef<boolean|string>(false)
  const busyCallback=useRef(onBusyChange)
  busyCallback.current=onBusyChange
  const owner=submission?.user_id||userId
@@ -14,7 +15,7 @@ export default function SubmissionBin({client,role,userId,requirement,submission
  const [links,setLinks]=useState(submission?submissionLinks(submission).join('\n'):'')
  const [note,setNote]=useState(submission?.note||'')
  const [files,setFiles]=useState<Attachment[]>([])
- const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('')
+ const [busy,setBusy]=useState(false),[acting,setActing]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState('')
  const [revision,setRevision]=useState(0),[clock,setClock]=useState(new Date())
  useEffect(()=>{setCurrent(submission);setLinks(submission?submissionLinks(submission).join('\n'):'');setNote(submission?.note||'')},[submission])
  useEffect(()=>{const timer=setInterval(()=>setClock(new Date()),1000);return()=>clearInterval(timer)},[])
@@ -22,9 +23,10 @@ export default function SubmissionBin({client,role,userId,requirement,submission
  useEffect(()=>{busyCallback.current?.(busy);return()=>busyCallback.current?.(false)},[busy])
  useEffect(()=>{onDirtyChange?.(role==='intern'&&(links!==(current?submissionLinks(current).join('\n'):'')||note!==(current?.note||'')))},[links,note,current,role,onDirtyChange])
  const cutoff=submissionCutoff(requirement),expired=!!cutoff&&clock.getTime()>=Date.parse(cutoff)
+ const state=requirementState(requirement,owner,current?[current]:[],clock)
  const editable=role==='intern'&&owner===userId&&canEditSubmission(requirement,current,clock)
  const message=(e:unknown)=>e&&typeof e==='object'&&'message'in e?String(e.message):'Could not save. Please try again.'
- async function action(work:()=>Promise<void>){if(busy)return;setBusy(true);setError('');setNotice('');try{await work();setRevision(v=>v+1)}catch(e){setError(message(e))}finally{setBusy(false);if(changed.current){changed.current=false;onChanged()}}}
+ async function action(work:()=>Promise<void>,key=''){if(busy)return;setBusy(true);setActing(key);setError('');setNotice('');try{await work();setRevision(v=>v+1)}catch(e){setError(message(e))}finally{setBusy(false);setActing('');if(changed.current){const status=changed.current;changed.current=false;onChanged(typeof status==='string'?status:undefined)}}}
  async function draft(){
   const values=links.split('\n').map(v=>v.trim()).filter(Boolean)
   if(values.length>10||values.some(v=>!validSubmissionLink(v)))throw new Error('Enter up to ten valid HTTP or HTTPS links, one per line.')
@@ -34,7 +36,7 @@ export default function SubmissionBin({client,role,userId,requirement,submission
  }
  async function changeStatus(status:string){
   const {data,error}=await client.from('requirement_submissions').update({status}).eq('requirement_id',requirement.id).eq('user_id',owner).select('*').single()
-  if(error)throw error;if(!data)throw new Error('Submission was not changed.');setCurrent(data);setNotice(status==='draft'?'Unsubmitted. You can edit before the deadline.':status==='in_review'?'Submitted for lead review.':'Review saved.');changed.current=true
+  if(error)throw error;if(!data)throw new Error('Submission was not changed.');setCurrent(data);setNotice(status==='draft'?'Unsubmitted. You can edit before the deadline.':status==='in_review'?'Submitted for lead review.':'Review saved.');changed.current=status
  }
  async function upload(selected:File[]){
   if(files.length+selected.length>5)throw new Error('Maximum five attachments. Remove a file before adding more.')
@@ -62,7 +64,7 @@ export default function SubmissionBin({client,role,userId,requirement,submission
   const link=document.createElement('a');link.href=data.signedUrl;link.target='_blank';link.rel='noopener noreferrer';link.click()
  }
  return <section className="submission-bin" aria-label="Submission bin" aria-busy={busy}>
-  <div className="dashboard-section-head"><h4>{role==='lead'?'Submitted work':'Your submission'}</h4><span className="data-pill">{requirementLabels[requirementState(requirement,owner,current?[current]:[],clock)]}</span></div>
+  <div className="dashboard-section-head"><h4>{role==='lead'?'Submitted work':'Your submission'}</h4><span className="badge-swap" key={state}><StatusBadge status={state}/></span></div>
   {cutoff&&<p className="manager-meta">Editing closes {new Date(cutoff).toLocaleString('en-PH',{timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'short'})} (Philippine time).</p>}
   {requirement.removing&&<p>Locked while your lead finishes removal.</p>}{expired&&<p>Locked: the deadline has passed. Your lead can still review submitted work.</p>}
   {current?.status==='draft'&&<p>Draft saved · not submitted</p>}
@@ -72,6 +74,6 @@ export default function SubmissionBin({client,role,userId,requirement,submission
   {error&&<p role="alert" className="auth-error">{error}</p>}{notice&&<p role="status" className="manager-notice">{notice}</p>}
   {editable?<div className="submission-fields"><label>Google Workspace or other links<textarea value={links} onChange={e=>setLinks(e.target.value)} disabled={busy} placeholder="One https:// link per line"/></label><p className="manager-meta">Share Google Docs, Sheets, Slides or Drive files with your reviewing lead. Adding a link does not change Google sharing permissions.</p><label>Note<textarea value={note} onChange={e=>setNote(e.target.value)} maxLength={5000} disabled={busy}/></label><label>Upload files (up to five, 10 MiB each)<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg" disabled={busy} onChange={e=>{const selected=Array.from(e.target.files||[]);e.target.value='';void action(()=>upload(selected))}}/></label></div>:<>{current&&submissionLinks(current).map((url,i)=><p key={url}>{validSubmissionLink(url)?<a href={url} target="_blank" rel="noopener noreferrer">{i===0?'Open submission':`Open link ${i+1}`}</a>:<span>Invalid submission link</span>}</p>)}{current?.note&&<p className="submission-note">{current.note}</p>}</>}
   {files.map(file=><div className="submission-row" key={file.id}><span>{file.name} · {Math.ceil(file.size/1024)} KiB{!file.uploaded?' · Pending upload':''}</span>{file.uploaded&&<button className="text-button" disabled={busy} onClick={()=>void action(()=>download(file))}>Download</button>}{editable&&<button className="text-button danger-button" disabled={busy} onClick={()=>void action(()=>remove(file))}>Remove file</button>}</div>)}
-  <div className="manager-actions submission-actions">{editable&&<><button className="text-button" disabled={busy} onClick={()=>void action(async()=>{await draft();setNotice('Draft saved.')} )}>Save draft</button><button className="primary-button" disabled={busy} onClick={()=>void action(async()=>{await draft();await changeStatus('in_review')})}>{busy?'Saving…':'Submit requirement'}</button></>}{role==='intern'&&!requirement.removing&&!expired&&current?.status==='in_review'&&<button className="text-button" disabled={busy} onClick={()=>void action(()=>changeStatus('draft'))}>Unsubmit to edit</button>}{role==='lead'&&!requirement.removing&&['in_review','completed'].includes(current?.status||'')&&<>{current?.status==='in_review'&&<button className="primary-button" disabled={busy} onClick={()=>void action(()=>changeStatus('completed'))}>Approve</button>}<button className="text-button" disabled={busy} onClick={()=>void action(()=>changeStatus('pending'))}>Request changes</button></>}</div>
+  <div className="manager-actions submission-actions">{editable&&<><button className="text-button" disabled={busy} onClick={()=>void action(async()=>{await draft();setNotice('Draft saved.')} )}>Save draft</button><button className="primary-button" disabled={busy} onClick={()=>void action(async()=>{await draft();await changeStatus('in_review')})}>{busy?'Saving…':'Submit requirement'}</button></>}{role==='intern'&&!requirement.removing&&!expired&&current?.status==='in_review'&&<button className="text-button" disabled={busy} onClick={()=>void action(()=>changeStatus('draft'))}>Unsubmit to edit</button>}{role==='lead'&&!requirement.removing&&['in_review','completed'].includes(current?.status||'')&&<>{current?.status==='in_review'&&<button className={`primary-button${acting==='approve'?' is-busy':''}`} disabled={busy} onClick={()=>void action(()=>changeStatus('completed'),'approve')}>Approve</button>}<button className={`text-button${acting==='changes'?' is-busy':''}`} disabled={busy} onClick={()=>void action(()=>changeStatus('pending'),'changes')}>Request changes</button></>}</div>
  </section>
 }

@@ -1,0 +1,385 @@
+/* Deep Lagoon InternFlows: projects, feedback, blockers and notifications. Shared primitives come from work.css. */
+
+.flow-actions,
+.flow-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.flow-toolbar {
+  justify-content: space-between;
+  margin-top: 0;
+}
+
+.primary-button.flow-create {
+  margin: 0 0 12px;
+}
+
+/* Segmented status tabs: equal-width tabs so the shared pill (useSlidingIndicator) only slides, never resizes */
+.flow-tabs {
+  position: relative;
+  display: inline-grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-btn);
+  background: var(--surface2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.panel .flow-tabs button {
+  position: relative;
+  z-index: 1;
+  min-height: 32px;
+  padding: 5px 14px;
+  border: 0;
+  border-radius: var(--r-badge);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 510;
+  box-shadow: none;
+}
+
+.panel .flow-tabs button[aria-pressed=true] {
+  color: var(--strong);
+}
+
+.flow-tabs .nav-pill {
+  right: auto;
+  border-radius: var(--r-badge);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line), var(--shadow);
+}
+
+/* Cards */
+.flow-card {
+  margin: 0 -12px;
+  padding: 16px 12px;
+  border-top: 1px solid var(--line);
+  border-radius: var(--r-btn);
+  min-width: 0;
+}
+
+.panel-heading + .flow-card,
+.flow-toolbar + .flow-card,
+.primary-button.flow-create + .flow-card {
+  border-top-color: transparent;
+}
+
+.flow-card h3 {
+  margin: 0 0 6px;
+  color: var(--strong);
+  font-size: 15px;
+  font-weight: 590;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.flow-card h4 {
+  margin: 18px 0 6px;
+  color: var(--strong);
+  font-size: 13px;
+  font-weight: 590;
+}
+
+.flow-card p {
+  margin: 6px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.flow-card p strong {
+  color: var(--strong);
+  font-weight: 510;
+}
+
+.flow-card p.manager-meta {
+  margin: 2px 0;
+  font-size: 12px;
+}
+
+.flow-card p > button:not([class]) {
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.flow-card progress {
+  max-width: 460px;
+  margin: 8px 0 12px;
+  animation: bar-fill 0.9s var(--ease-out) 0.2s both;
+}
+
+.blocker-card .flow-row > strong .status-badge {
+  margin-left: 4px;
+  vertical-align: 1px;
+}
+
+.project-card p > .status-badge {
+  margin: 0 4px;
+  vertical-align: 1px;
+}
+
+.project-card h3 {
+  font-size: 17px;
+  letter-spacing: -0.015em;
+}
+
+.project-card > h3 + button:not([class]) {
+  margin: 0 0 6px;
+}
+
+.flow-body {
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.intern-flows .flow-card .flow-body {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.flow-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.flow-row > div {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.flow-row > div > strong,
+.flow-row > strong {
+  color: var(--strong);
+  font-size: 14px;
+  font-weight: 510;
+  overflow-wrap: anywhere;
+}
+
+.blocker-card .flow-row > strong::first-letter {
+  text-transform: uppercase;
+}
+
+.flow-row > span.manager-meta {
+  font-size: 12px;
+}
+
+/* Notifications: unread carries a soft accent bar that fades out once marked read */
+.intern-flows > .flow-card {
+  position: relative;
+}
+
+.intern-flows .flow-unread::before,
+.intern-flows .flow-just-read::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 3px;
+  border-radius: var(--r-badge);
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+.intern-flows .flow-just-read::before {
+  animation: bar-fade 0.6s var(--ease-out) forwards;
+}
+
+@keyframes bar-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+.intern-flows .flow-unread {
+  margin: 4px -12px;
+  border-top-color: transparent;
+  background: var(--nbabg);
+  box-shadow: inset 0 0 0 1px var(--nbaline);
+}
+
+.intern-flows .flow-unread + .flow-card {
+  border-top-color: transparent;
+}
+
+/* Inline editors: fields pair up, long text gets a full row, and Save + Cancel stay together */
+.intern-flows .record-form fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.intern-flows .record-form fieldset > label {
+  flex: 1 1 calc(50% - 8px);
+}
+
+.intern-flows .record-form fieldset > label:has(textarea) {
+  flex-basis: 100%;
+}
+
+.intern-flows .record-form fieldset > button {
+  flex: none;
+  align-self: center;
+}
+
+.intern-flows .record-form fieldset > button + button {
+  margin-left: -8px;
+}
+
+/* Blocker discussion and team management */
+.blocker-discussion {
+  margin-top: 6px;
+}
+
+.flow-card .record-form :is(h3, h4) {
+  margin: 0 0 14px;
+}
+
+.blocker-discussion summary,
+.team-management summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 8px;
+  margin-left: -8px;
+  border-radius: var(--r-btn);
+  color: var(--accenttext);
+  font-size: 13px;
+  font-weight: 510;
+  cursor: pointer;
+}
+
+.intern-flows .flow-comment {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.flow-comment strong {
+  color: var(--strong);
+  font-weight: 510;
+}
+
+/* Room for field focus rings inside the clipped expanding body */
+.blocker-discussion > .expand > div {
+  margin: 0 -4px;
+  padding: 0 4px 4px;
+}
+
+.blocker-discussion form {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+
+.blocker-discussion form .text-button {
+  justify-self: start;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* Empty states and focus */
+.intern-flows > p:not([role]) {
+  margin: 0;
+  padding: 24px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.flow-empty {
+  padding: 24px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.flow-empty h3 {
+  margin: 0 0 4px;
+  color: var(--strong);
+  font-size: 15px;
+  font-weight: 590;
+}
+
+.flow-empty p {
+  margin: 0;
+}
+
+.focused-record {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  scroll-margin-top: 24px;
+}
+
+.team-management {
+  margin: 12px 0 0;
+}
+
+.team-management p {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.flow-card .team-management p > button:not([class]),
+.team-management p > span > button:not([class]) {
+  margin-left: 0;
+}
+
+@media (max-width: 767px) {
+  .flow-toolbar {
+    align-items: stretch;
+  }
+
+  .flow-tabs {
+    width: 100%;
+  }
+
+  .panel .flow-tabs button {
+    flex: 1;
+    min-height: 44px;
+  }
+
+  .blocker-discussion summary,
+  .team-management summary {
+    min-height: 44px;
+  }
+
+  .flow-row {
+    align-items: flex-start;
+  }
+}
+
+@media (pointer: coarse) {
+  .panel .flow-tabs button,
+  .blocker-discussion summary,
+  .team-management summary {
+    min-height: 44px;
+  }
+}
+
+@media (forced-colors: active) {
+  .intern-flows .flow-unread::before {
+    background: Highlight;
+  }
+
+  .flow-tabs,
+  .intern-flows .flow-unread {
+    border: 1px solid CanvasText;
+  }
+
+  .panel .flow-tabs button[aria-pressed=true] {
+    outline: 2px solid Highlight;
+  }
+}

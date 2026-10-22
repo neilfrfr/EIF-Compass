@@ -1,0 +1,819 @@
+/* Deep Lagoon Overview: intern and lead dashboards, with arrival stagger, spotlight, inline explanation and status badges. */
+
+.role-dashboard {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Arrival: the dashboard staggers its own sections once per mount (Dashboard clears the class), so the page-level rise is skipped. */
+.page-entering > .role-dashboard {
+  animation: none;
+}
+
+.dashboard-arrive > * {
+  animation: rise 0.7s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 80ms);
+}
+
+.dashboard-arrive > :nth-child(2) { --i: 1; }
+.dashboard-arrive > :nth-child(3) { --i: 2; }
+.dashboard-arrive > :nth-child(4) { --i: 3; }
+.dashboard-arrive > :nth-child(5) { --i: 4; }
+.dashboard-arrive > :nth-child(6) { --i: 5; }
+.dashboard-arrive > :nth-child(n+7) { --i: 6; }
+
+/* Progress bars fill from 0 on arrival. */
+.dashboard-arrive progress {
+  animation: bar-fill 0.9s var(--ease-out) 0.3s both;
+}
+
+@keyframes bar-fill {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
+/* Welcome + fellowship journey */
+.dashboard-welcome {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.dashboard-welcome > div:first-child {
+  min-width: 0;
+}
+
+.dashboard-welcome h2 {
+  margin: 0;
+  color: var(--strong);
+  font-size: 22px;
+  font-weight: 510;
+  line-height: 1.3;
+  letter-spacing: -0.022em;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-welcome p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.fellowship-journey {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px 12px;
+  flex: none;
+  width: 280px;
+  max-width: 45%;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.fellowship-journey > span:first-child {
+  color: var(--strong);
+  font-weight: 510;
+}
+
+.dashboard-date {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fellowship-journey progress {
+  grid-column: 1 / -1;
+}
+
+progress {
+  display: block;
+  width: 100%;
+  height: 5px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 99px;
+  background: var(--line);
+  accent-color: var(--accent);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+progress::-webkit-progress-bar {
+  border-radius: 99px;
+  background: var(--line);
+}
+
+progress::-webkit-progress-value {
+  border-radius: 99px;
+  background: var(--progress-fill);
+}
+
+progress::-moz-progress-bar {
+  border-radius: 99px;
+  background: var(--progress-fill);
+}
+
+/* Next Best Action */
+.dashboard-next-action {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 26px;
+  overflow: hidden;
+  flex-wrap: wrap;
+  border-radius: var(--r-card);
+  background: var(--nbabg);
+  box-shadow: inset 0 0 0 1px var(--nbaline);
+}
+
+.dashboard-next-action::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(420px circle at var(--mx, 70%) var(--my, 0%), var(--glow), transparent 60%);
+  pointer-events: none;
+}
+
+/* Spotlight ring: a hairline that lights up near the cursor (Dashboard sets --mx/--my on fine pointers). */
+.dashboard-next-action::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  padding: 1px;
+  border-radius: inherit;
+  background: radial-gradient(160px circle at var(--mx, 70%) var(--my, 0%), var(--accent), transparent 70%);
+  -webkit-mask: linear-gradient(var(--canvas) 0 0) content-box, linear-gradient(var(--canvas) 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(var(--canvas) 0 0) content-box exclude, linear-gradient(var(--canvas) 0 0);
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out);
+  pointer-events: none;
+}
+
+.dashboard-next-action > div:first-child {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.nba-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+  padding: 2px 9px;
+  border-radius: 99px;
+  background: var(--chip);
+  color: var(--accenttext);
+  font-size: 11px;
+  font-weight: 510;
+}
+
+.nba-chip span {
+  display: inline-block;
+  animation: twinkle 3.2s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8) rotate(20deg);
+  }
+}
+
+/* Inline "Explain this": expands below the card's content. */
+.explain-inline,
+.expand {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: expand 0.4s var(--ease-out);
+}
+
+.explain-inline {
+  flex: 1 1 100%;
+}
+
+/* Collapsed keeps the explanation mounted, so reopening never starts a second request. */
+.explain-inline[hidden] {
+  display: none;
+}
+
+.explain-inline > *,
+.expand > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@keyframes expand {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+.explain-body {
+  padding-top: 16px;
+  border-top: 1px solid var(--nbaline);
+}
+
+.dashboard-next-action .explain-answer {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.explain-caret,
+.stream-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: var(--accent);
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.explain-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+.explain-note {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.explain-note.is-warning {
+  color: var(--amber);
+  font-weight: 510;
+}
+
+.dashboard-next-action .explain-error {
+  margin-top: 6px;
+  color: var(--red);
+  font-size: 12px;
+}
+
+.dashboard-next-action h3 {
+  margin: 0 0 6px;
+  color: var(--strong);
+  font-size: 22px;
+  font-weight: 510;
+  line-height: 1.3;
+  letter-spacing: -0.022em;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-next-action p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.next-action-controls {
+  display: grid;
+  flex: none;
+  gap: 6px;
+}
+
+.next-action-controls .text-button,
+.dashboard-quick-actions .text-button {
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.dashboard-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .next-action-controls .text-button:hover,
+  .dashboard-quick-actions .text-button:hover {
+    background: var(--surface);
+    box-shadow: inset 0 0 0 1px var(--muted);
+  }
+
+  .dashboard-next-action:hover::before {
+    opacity: 1;
+  }
+}
+
+/* Metric strip */
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.dashboard-metrics article {
+  min-width: 0;
+  padding: 16px 20px;
+}
+
+.dashboard-metrics article + article {
+  box-shadow: -1px 0 0 var(--line);
+}
+
+.dashboard-metrics article > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dashboard-metrics strong {
+  display: block;
+  margin: 6px 0 2px;
+  color: var(--strong);
+  font-size: 28px;
+  font-weight: 510;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-metrics p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Panels */
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.dashboard-panel h3 {
+  margin: 0 0 8px;
+  color: var(--strong);
+  font-size: 14px;
+  font-weight: 590;
+  line-height: 1.4;
+}
+
+.dashboard-panel h4 {
+  margin: 10px 0 4px;
+  color: var(--strong);
+  font-size: 14px;
+  font-weight: 510;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-panel > p {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dashboard-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 4px;
+}
+
+.dashboard-section-head h3 {
+  margin: 0;
+}
+
+.dashboard-section-head > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.dashboard-panel button {
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--r-btn);
+  background: transparent;
+  color: var(--accenttext);
+  font-size: 12px;
+  font-weight: 510;
+}
+
+.dashboard-section-head button {
+  margin-right: -8px;
+  font-weight: 400;
+}
+
+/* Rows */
+.dashboard-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 -8px;
+  padding: 10px 8px;
+  border-radius: var(--r-btn);
+}
+
+.dashboard-line > div {
+  min-width: 0;
+}
+
+.dashboard-line strong {
+  color: var(--strong);
+  font-size: 13px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-line p,
+.team-progress p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.dashboard-panel .record-link {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  color: var(--strong);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-panel .record-link:active:not(:disabled) {
+  transform: none;
+}
+
+/* Status badges always pair an icon with text; event tags share the shape. */
+.status-badge,
+.event-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 2px 8px;
+  border-radius: var(--r-badge);
+  background: var(--chip);
+  color: var(--accenttext);
+  font-size: 11px;
+  font-weight: 510;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.status-badge svg {
+  flex: none;
+}
+
+.intern-detail .status-badge,
+.dashboard-panel p .status-badge {
+  margin: 0 4px;
+  vertical-align: 1px;
+}
+
+.status-badge.is-pending,
+.status-badge.is-to_do {
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+.status-badge.is-open {
+  background: var(--amberbg);
+  color: var(--amber);
+}
+
+.status-badge.is-overdue {
+  background: var(--redbg);
+  color: var(--red);
+}
+
+.status-badge.is-overdue svg {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  50% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+}
+
+/* Lead: team progress, drill-down and table */
+.team-progress {
+  padding: 12px 0;
+}
+
+.team-progress + .team-progress {
+  border-top: 1px solid var(--line);
+}
+
+.team-progress > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.team-progress strong {
+  min-width: 0;
+  color: var(--strong);
+  font-weight: 510;
+  overflow-wrap: anywhere;
+}
+
+.team-progress > div:first-child span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.team-progress progress {
+  margin: 8px 0 6px;
+}
+
+.team-progress > button {
+  margin-left: -8px;
+}
+
+.expand {
+  margin-top: 12px;
+}
+
+.intern-detail {
+  padding: 12px 14px;
+  border-radius: var(--r-btn);
+  background: var(--surface2);
+  color: var(--ink);
+}
+
+.intern-detail h4 {
+  margin-top: 0;
+}
+
+.intern-detail p {
+  margin: 4px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-table-scroll {
+  position: relative;
+  overflow-x: auto;
+}
+
+/* One shared hover highlight glides between list rows (useRowGlide; fine pointers only). It sits under the rows' content. */
+:has(> .row-glide) {
+  position: relative;
+  isolation: isolate;
+}
+
+.row-glide {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  border-radius: var(--r-btn);
+  background: var(--hover);
+  opacity: 0;
+  transition: transform 0.25s var(--ease-out), opacity 0.2s var(--ease-out);
+  pointer-events: none;
+}
+
+.dashboard-table {
+  position: relative;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.dashboard-table th {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 510;
+  white-space: nowrap;
+}
+
+.dashboard-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Events */
+.dashboard-events {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.dashboard-events article {
+  min-width: 0;
+  padding: 14px;
+  border-radius: var(--r-card);
+  background: var(--surface2);
+}
+
+.dashboard-events h4 {
+  margin: 8px 0 4px;
+  font-size: 13px;
+}
+
+.dashboard-events p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-panel button:hover {
+    background: var(--hover);
+  }
+
+  .dashboard-line:hover {
+    background: var(--hover);
+  }
+
+  .row-glide {
+    display: block;
+  }
+
+  .dashboard-panel .record-link:hover {
+    background: transparent;
+    text-decoration: underline;
+    text-decoration-color: var(--muted);
+  }
+}
+
+/* useRowGlide stays out under reduced motion, so glided rows get a static hover instead. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  .dashboard-table tbody tr:hover,
+  .work-row:hover,
+  .submission-list > div:hover,
+  .intern-flows > .flow-card:hover,
+  .agenda-list article:hover,
+  .calendar-selection label:hover {
+    background: var(--hover);
+  }
+}
+
+/* Breakpoints */
+@media (max-width: 1199px) {
+  .dashboard-columns {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-metrics article:nth-child(3) {
+    box-shadow: 0 -1px 0 var(--line);
+  }
+
+  .dashboard-metrics article:nth-child(4) {
+    box-shadow: -1px 0 0 var(--line), 0 -1px 0 var(--line);
+  }
+
+  .dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-events {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-welcome {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .dashboard-welcome h2 {
+    font-size: 20px;
+  }
+
+  .fellowship-journey {
+    width: 100%;
+    max-width: none;
+  }
+
+  .dashboard-next-action {
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  /* In a column, the desktop flex bases would wrap the explanation into an off-screen second column. */
+  .dashboard-next-action > * {
+    flex: none;
+  }
+
+  .dashboard-next-action h3 {
+    font-size: 19px;
+  }
+
+  .next-action-controls {
+    /* Fixed tracks: auto-fit sizes the card's height for one column, stretching both buttons to 94px. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-metrics article {
+    padding: 14px 16px;
+  }
+
+  .dashboard-metrics strong {
+    font-size: 24px;
+  }
+
+  .dashboard-line {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+
+  .dashboard-line > div {
+    flex: 1 1 160px;
+  }
+
+  .dashboard-events {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-table th,
+  .dashboard-table td {
+    padding: 10px 8px;
+  }
+
+  /* One line with an ellipsis; the full name stays in the DOM and the title. */
+  .dashboard-name {
+    display: block;
+    max-width: 14ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Touch targets: 44px on small screens and coarse pointers. */
+@media (max-width: 767px), (pointer: coarse) {
+  .dashboard-panel button {
+    min-height: 44px;
+  }
+
+  .dashboard-panel .record-link {
+    display: inline-block;
+    min-height: 44px;
+    padding: 11px 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .dashboard-next-action,
+  .dashboard-metrics,
+  .status-badge,
+  .event-tag,
+  .dashboard-events article {
+    border: 1px solid CanvasText;
+  }
+}

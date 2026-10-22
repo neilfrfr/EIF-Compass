@@ -6,7 +6,7 @@ import {createRoot} from 'react-dom/client'
 import {JSDOM} from 'jsdom'
 mkdirSync('.test-output',{recursive:true})
 let Bin
-try{for(const name of ['SubmissionBin','submissions'])writeFileSync(`.test-output/${name}.js`,ts.transpileModule(readFileSync(`src/${name}.${name==='SubmissionBin'?'tsx':'ts'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replaceAll("'./submissions'","'./submissions.js'"));Bin=(await import('../.test-output/SubmissionBin.js')).default}catch{}
+try{for(const name of ['SubmissionBin','submissions','StatusBadge'])writeFileSync(`.test-output/${name}.js`,ts.transpileModule(readFileSync(`src/${name}.${name==='submissions'?'ts':'tsx'}`,'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replaceAll("'./submissions'","'./submissions.js'").replaceAll("'./StatusBadge'","'./StatusBadge.js'"));Bin=(await import('../.test-output/SubmissionBin.js')).default}catch{}
 assert.equal(typeof Bin,'function','Submission bin component must exist')
 const dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'});Object.assign(globalThis,{window:dom.window,document:dom.window.document,HTMLElement:dom.window.HTMLElement,IS_REACT_ACT_ENVIRONMENT:true})
 const root=createRoot(document.getElementById('root'))
