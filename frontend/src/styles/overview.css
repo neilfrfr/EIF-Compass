@@ -784,6 +784,15 @@ progress::-moz-progress-bar {
   .dashboard-table td {
     padding: 10px 8px;
   }
+
+  /* One line with an ellipsis; the full name stays in the DOM and the title. */
+  .dashboard-name {
+    display: block;
+    max-width: 14ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /* Touch targets: 44px on small screens and coarse pointers. */

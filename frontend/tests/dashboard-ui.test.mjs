@@ -84,5 +84,7 @@ await render('lead',21)
 assert.ok(queueRow()?.classList.contains('is-completing'),'Reviewed submission holds with .is-completing')
 await act(async()=>new Promise(r=>setTimeout(r,650)))
 assert.ok(!queueRow(),'Reviewed submission is gone after 600ms')
+{const name=document.querySelector('.dashboard-table .dashboard-name');assert.equal(name.title,name.textContent,'progress-table name keeps the full name in its title')
+const css=readFileSync('src/styles/overview.css','utf8'),phone=css.slice(css.indexOf('@media (max-width: 767px) {'));assert.match(phone.slice(0,phone.indexOf('/* Touch targets')),/\.dashboard-name \{[^}]*overflow: hidden;[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/,'ellipsis rule lives in the phone block')}
 await act(async()=>root.unmount())
 console.log('PASS: database-backed role layouts, intern isolation, review queue, drill-down and navigation')
