@@ -82,9 +82,14 @@ assert.equal(flashApi.isFlashing('t1'),false)
 await act(async()=>flashApi.flash('t1'))
 assert.equal(flashApi.isFlashing('t1'),true,'flashing right after flash()')
 assert.equal(flashApi.isFlashing('t2'),false)
+await act(async()=>flashApi.clear('t1'))
+assert.equal(flashApi.isFlashing('t1'),false,'clear() cancels a flash (status reverted within the window)')
+await act(async()=>flashApi.flash('t1'))
 await act(async()=>new Promise(r=>realTimeout(r,650)))
 assert.equal(flashApi.isFlashing('t1'),false,'flash ends after 600ms')
 await act(async()=>r2.unmount())
+flashApi.flash('late')
+assert.equal(flashApi.isFlashing('late'),false,'flash after unmount schedules nothing')
 
 // useRowGlide: one aria-hidden glide per list, follows the hovered row, hides on leave, absent under reduced motion
 function Glide(){const ref=React.useRef(null);useRowGlide(ref,'.row');return React.createElement('div',{ref,className:'list'},React.createElement('div',{className:'row'},'A'),React.createElement('div',{className:'row'},'B'))}

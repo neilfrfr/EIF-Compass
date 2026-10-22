@@ -3,9 +3,9 @@ import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { reducedMotion } from './motion'
 
-type Props = { title: string; children: ReactNode; onClose: () => void; dirty?: boolean; busy?: boolean }
+type Props = { title: string; children: ReactNode; onClose: () => void; dirty?: boolean; busy?: boolean; closeRequested?: boolean }
 
-export default function DetailDrawer({ title, children, onClose, dirty = false, busy = false }: Props) {
+export default function DetailDrawer({ title, children, onClose, dirty = false, busy = false, closeRequested = false }: Props) {
  const keyboardEntry = useRef(typeof document !== 'undefined' && document.activeElement?.matches(':focus-visible'))
  const heading = useId()
  const panel = useRef<HTMLElement>(null)
@@ -27,8 +27,12 @@ export default function DetailDrawer({ title, children, onClose, dirty = false, 
  function leave() {
   if(leaving.current)return
   leaving.current=true
+  // Exit starts from wherever the entry slide is, so closing mid-entry never snaps.
+  if(panel.current)panel.current.style.setProperty('--drawer-from',window.getComputedStyle(panel.current).transform||'none')
   setClosing(true)
  }
+ // The parent asks for an animated close (e.g. after a successful save) instead of unmounting outright.
+ useEffect(()=>{if(closeRequested)leave()},[closeRequested])
  useLayoutEffect(()=>{
   if(!closing)return
   const running=panel.current?.getAnimations?.()??[]

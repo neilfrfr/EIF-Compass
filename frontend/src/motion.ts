@@ -84,13 +84,18 @@ export function useRowGlide(listRef:RefObject<HTMLElement|null>,rowSelector:stri
 }
 
 /** Marks an id as completing for 600ms so its row can play the check + strike animation. No-op under reduced motion. */
-export function useCompletionFlash():{flash(id:string):void;isFlashing(id:string):boolean}{
+export function useCompletionFlash():{flash(id:string):void;clear(id:string):void;isFlashing(id:string):boolean}{
   const [ids,setIds]=useState<string[]>([])
   const timers=useRef(new Map<string,number>())
-  useEffect(()=>()=>{timers.current.forEach(timer=>window.clearTimeout(timer));timers.current.clear()},[])
+  const alive=useRef(true)
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;timers.current.forEach(timer=>window.clearTimeout(timer));timers.current.clear()}},[])
   return {
+    clear(id){
+      window.clearTimeout(timers.current.get(id));timers.current.delete(id)
+      setIds(current=>current.includes(id)?current.filter(x=>x!==id):current)
+    },
     flash(id){
-      if(reducedMotion())return
+      if(!alive.current||reducedMotion())return
       window.clearTimeout(timers.current.get(id))
       timers.current.set(id,window.setTimeout(()=>{timers.current.delete(id);setIds(current=>current.filter(x=>x!==id))},600))
       setIds(current=>current.includes(id)?current:[...current,id])

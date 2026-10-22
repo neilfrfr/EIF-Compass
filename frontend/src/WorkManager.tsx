@@ -15,7 +15,7 @@ type Sprint = {id:string;project_id:string;title:string;sequence:number}
 type Project = {id:string;title:string;team_id:string}
 type Milestone = {id:string;title:string;project_id:string;sprint_id:string}
 type Submission = SubmissionRow
-type Editor = { kind: 'record'; item?: RecordItem }
+type Editor = { kind: 'record'; item?: RecordItem; closing?: boolean }
 type Props = { client: SupabaseClient; role: Role; view: View; userId: string; cohortId: string; onChanged: () => void; focusedRecordId?: string; onFocusConsumed?: () => void }
 const labels: Record<string, string> = {to_do:'To do',in_progress:'In progress',for_review:'For review',completed:'Completed',pending:'Pending',in_review:'In review',overdue:'Overdue'}
 function dateLabel(value?: string, time=false) {
@@ -54,12 +54,13 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged,
  const [sprintFilter,setSprintFilter]=useState('all')
  const [priorityFilter,setPriorityFilter]=useState('all')
  const [statusFilter,setStatusFilter]=useState('all')
- const {flash,isFlashing}=useCompletionFlash()
+ const {flash,clear,isFlashing}=useCompletionFlash()
+ const completing=useRef(new Set<string>())
  const list=useRef<HTMLDivElement>(null),submissionRows=useRef<HTMLDivElement>(null)
  useRowGlide(list,'.work-row');useRowGlide(submissionRows,'.submission-list > div')
  useEffect(()=>{
   let active=true
-  setLoading(true);setError('');setEditor(null);setRemoving(null)
+  setLoading(true);setError('');setEditor(current=>current?.closing?current:null);setRemoving(null)
   async function load(){
    try {
     const [result,people,submitted,sprintRows,projectRows,milestoneRows]=await Promise.all([
@@ -71,7 +72,7 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged,
      table==='tasks'?client.from('milestones').select('id,title,project_id,sprint_id').eq('cohort_id',cohortId):Promise.resolve({data:[],error:null}),
     ])
     if(result.error||people.error||submitted.error||sprintRows.error||projectRows.error||milestoneRows.error)throw result.error||people.error||submitted.error||sprintRows.error||projectRows.error||milestoneRows.error
-    if(active){setRecords(result.data||[]);setMembers(people.data||[]);setSubmissions(submitted.data||[]);setSprints(sprintRows.data||[]);setProjects(projectRows.data||[]);setMilestones(milestoneRows.data||[])}
+    if(active){completing.current.forEach(flash);completing.current.clear();setRecords(result.data||[]);setMembers(people.data||[]);setSubmissions(submitted.data||[]);setSprints(sprintRows.data||[]);setProjects(projectRows.data||[]);setMilestones(milestoneRows.data||[])}
    }catch(e){if(active)setError(message(e))}finally{if(active)setLoading(false)}
   }
   void load();return()=>{active=false}
@@ -82,10 +83,10 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged,
  async function write(operation:()=>PromiseLike<{data:unknown;error:unknown}>,success:string){
   if(busy)return false
   setBusy(true);setError('');setNotice('')
-  try{const result=await operation();if(result.error)throw result.error;if(!Array.isArray(result.data)||!result.data.length)throw new Error('No record was saved. Refresh and check your permissions.');setEditor(null);setRemoving(null);setNotice(success);setRevision(v=>v+1);onChanged();return true}catch(e){setError(message(e));return false}finally{setBusy(false)}
+  try{const result=await operation();if(result.error)throw result.error;if(!Array.isArray(result.data)||!result.data.length)throw new Error('No record was saved. Refresh and check your permissions.');setEditor(current=>current&&{...current,closing:true});setRemoving(null);setNotice(success);setRevision(v=>v+1);onChanged();return true}catch(e){setError(message(e));return false}finally{setBusy(false)}
  }
  async function save(event:FormEvent<HTMLFormElement>){
-  event.preventDefault();if(busy||!editor)return
+  event.preventDefault();if(busy||!editor||editor.closing)return
   const values=new FormData(event.currentTarget)
   const text=(key:string)=>String(values.get(key)||'').trim()
   if(role!=='lead'){setError('Only leads can create and edit records.');return}
@@ -123,7 +124,8 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged,
   const response=await fetch('/api/submissions/remove',{method:'DELETE',headers:{Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},body:JSON.stringify({id})})
   const result=await response.json();if(!response.ok)throw new Error(result.error||'Removal failed.');return {data:result.data,error:null}
  }
- function taskStatus(item:RecordItem,status:string){void write(()=>client.from('tasks').update({status}).eq('id',item.id).eq('assignee_id',userId).eq('cohort_id',cohortId).select('id'),'Task status saved.').then(saved=>{if(saved&&status==='completed')flash(item.id)})}
+ function taskStatus(item:RecordItem,status:string){if(status!=='completed'){clear(item.id);completing.current.delete(item.id)}
+  void write(()=>client.from('tasks').update({status}).eq('id',item.id).eq('assignee_id',userId).eq('cohort_id',cohortId).select('id'),'Task status saved.').then(saved=>{if(saved&&status==='completed'){completing.current.add(item.id);flash(item.id)}})}
  const mine=(r:RecordItem)=>submissions.find(s=>s.requirement_id===r.id&&s.user_id===userId)
  const [clock,setClock]=useState(new Date())
  useEffect(()=>{if(table!=='requirements')return;const timer=setInterval(()=>setClock(new Date()),1000);return()=>clearInterval(timer)},[table])
@@ -148,7 +150,7 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged,
  return <section className={`panel work-manager work-${table}`}>
   <div className="panel-heading"><div><h2>{table==='tasks'?'Tasks':table==='requirements'?'Requirements':'Events'}</h2></div><div className="manager-actions"><button className="text-button" disabled={busy||loading} onClick={()=>setRevision(v=>v+1)}>Refresh</button>{role==='lead'&&<button className="primary-button" disabled={loading||busy} onClick={()=>{setError('');setEditorDirty(false);setEditor({kind:'record'})}}>Add {singular}</button>}</div></div>
   {error&&<p className="auth-error" role="alert">{error}</p>}{notice&&<p role="status" className="manager-notice">{notice}</p>}
-  {editor&&<DetailDrawer title={`${editor.item?'Edit':'Add'} ${singular}`} busy={busy} dirty={editorDirty} onClose={()=>setEditor(null)}><form key={`${editor.kind}:${editor.item?.id || 'new'}`} className="record-form" onChange={()=>setEditorDirty(true)} onSubmit={save} noValidate aria-busy={busy}>
+  {editor&&<DetailDrawer title={`${editor.item?'Edit':'Add'} ${singular}`} busy={busy} dirty={editorDirty} closeRequested={!!editor.closing} onClose={()=>setEditor(null)}><form key={`${editor.kind}:${editor.item?.id || 'new'}`} className="record-form" onChange={()=>setEditorDirty(true)} onSubmit={save} noValidate aria-busy={busy}>
    {error&&<p role="alert" className="auth-error">{error}</p>}
    <fieldset disabled={busy}>
    <>
@@ -168,8 +170,8 @@ export default function WorkManager({client,role,view,userId,cohortId,onChanged,
   {table==='tasks'&&<div className="work-filters"><label>Due date<select value={dueFilter} onChange={e=>setDueFilter(e.target.value)}><option value="all">All dates</option><option value="overdue">Overdue</option><option value="today">Today</option><option value="next7">Next seven days</option><option value="upcoming">Today or later</option><option value="none">No deadline</option></select></label><label>Sprint<select value={sprintFilter} onChange={e=>setSprintFilter(e.target.value)}><option value="all">All sprints</option><option value="none">No sprint</option>{sprints.map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></label><label>Priority<select value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)}><option value="all">All priorities</option>{['low','medium','high'].map(p=><option key={p} value={p}>{p}</option>)}</select></label><label>Status<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">All statuses</option>{['to_do','in_progress','for_review','completed'].map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label>{(filter||dueFilter!=='all'||sprintFilter!=='all'||priorityFilter!=='all'||statusFilter!=='all')&&<button className="text-button" onClick={()=>{setFilter('');setDueFilter('all');setSprintFilter('all');setPriorityFilter('all');setStatusFilter('all')}}>Reset filters</button>}</div>}
   {table==='requirements'&&<label>Requirement status<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">All statuses</option>{Object.entries(requirementLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
   {table!=='tasks'&&(filter||statusFilter!=='all')&&<button className="text-button" onClick={()=>{setFilter('');setStatusFilter('all')}}>Reset filters</button>}</div>
-  {!loading&&<p className="filter-summary">{shown.length} {singular}{shown.length===1?'':'s'}{shown.length!==records.length?` of ${records.length}`:''}</p>}
-  {loading?<p role="status">Loading {table}…</p>:<div ref={list} className="manager-list">{shown.map(r=><article className={`manager-record work-row${isFlashing(r.id)?` is-completing${matches(r)?'':' is-leaving'}`:''}`} key={r.id}>
+  {(!loading||records.length>0)&&<p className="filter-summary">{shown.length} {singular}{shown.length===1?'':'s'}{shown.length!==records.length?` of ${records.length}`:''}</p>}
+  {loading&&!records.length?<p role="status">Loading {table}…</p>:<div ref={list} className="manager-list">{shown.map(r=><article className={`manager-record work-row${isFlashing(r.id)?` is-completing${matches(r)?'':' is-leaving'}`:''}`} key={r.id}>
    <div className="work-row-main"><div className="manager-record-heading">{isFlashing(r.id)&&<svg className="complete-check" aria-hidden="true" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg>}<h3><button className="record-open" onClick={()=>{setDirty(false);setDetailId(r.id)}}>{r.title}</button></h3></div>
    <p className="manager-meta">{table==='events'?`${dateLabel(r.starts_at,true)} · ${r.event_type} · ${r.location||'Location to follow'}`:`${r.due_at?dateLabel(r.due_at,true):dateLabel(r.due_date)} · ${r.assignee_id?(members.find(m=>m.id===r.assignee_id)?.display_name||(r.assignee_id===userId?'Assigned to you':'Assigned intern')):'Shared with cohort'}`}</p>
    {table==='tasks'&&<p className="manager-meta">{projects.find(p=>p.id===r.project_id)?.title||r.project_name||'Fellowship work'} · {sprints.find(s=>s.id===r.sprint_id)?.title||'No sprint'}</p>}

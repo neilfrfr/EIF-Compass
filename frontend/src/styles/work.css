@@ -526,6 +526,10 @@
 }
 
 @keyframes drawer-out {
+  from {
+    transform: var(--drawer-from, none);
+  }
+
   to {
     transform: translateX(100%);
   }
