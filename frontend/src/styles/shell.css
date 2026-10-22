@@ -812,8 +812,7 @@ body:has(.mobile-navigation[open]) {
   text-align: center;
 }
 
-.login-card::before,
-.studio-login-checking p::before {
+.login-card::before {
   content: "";
   display: block;
   width: 56px;
@@ -843,14 +842,6 @@ body:has(.mobile-navigation[open]) {
 .login-card .manager-actions {
   justify-content: center;
   margin-top: 20px;
-}
-
-.studio-login-checking p {
-  position: relative;
-  margin: 0;
-  color: var(--muted);
-  font-size: 15px;
-  text-align: center;
 }
 
 /* Breakpoints */
