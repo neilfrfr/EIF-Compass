@@ -13,7 +13,7 @@ It requires a pull request, one approval, dismissal of stale approvals when new 
 
 One approval needs another collaborator with write access; a PR author cannot approve their own PR. If you are working alone, set Required approvals to 0 while keeping the pull request requirement.
 
-Required status checks are not configured yet because the repository does not have a build workflow. After adding CI and seeing it run, add its actual check name to the ruleset.
+`.github/workflows/ci.yml` runs migration checks, tests and the production build on every pull request. After it has run once, add its check name, `test-and-build`, under Require status checks to pass in the ruleset so a failing build blocks merging into `dev`.
 
 ## Make dev the default branch
 

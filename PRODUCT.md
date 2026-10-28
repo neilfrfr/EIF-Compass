@@ -6,4 +6,4 @@ The product includes Overview, My work/Cohort tasks, Requirements, Calendar, Pro
 
 Fellowship Studio is the approved design direction: a professional teal identity with warm surfaces, clear priorities, and meaningful visual richness. Desktop is primary; occasional phone use must support the core workflows. `DESIGN.md` records the shipped design system.
 
-Preserve existing role boundaries, database policies, submission deadlines, attachment rules, explicit calendar confirmation, assistant privacy, and draft-only email/calendar outputs. Redesign does not introduce dark mode, Kanban, bulk actions, or new backend features. The README remains the source for deployment and implementation status.
+Preserve existing role boundaries, database policies, submission deadlines, attachment rules, explicit calendar confirmation, assistant privacy, and draft-only email/calendar outputs. Redesign does not introduce dark mode, Kanban, bulk actions, or new backend features. `docs/status.md` is the source for implementation status and `docs/setup.md` for deployment.
