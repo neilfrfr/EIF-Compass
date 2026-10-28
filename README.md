@@ -38,7 +38,7 @@ Fill in `frontend/.env.local` with your Supabase project URL and publishable key
 ## Documentation
 
 - [Product requirements (PRD)](docs/prd.md)
-- [Implementation status](docs/status.md) and [verification checklist](docs/verification-checklist.md)
+- [Implementation status](docs/status.md), [verification checklist](docs/verification-checklist.md) and [PRD traceability](docs/prd-traceability.md)
 - [Setup: Supabase, Vercel, migrations](docs/setup.md)
 - [Features: workflows, dashboards, assistant, Google Calendar](docs/features.md)
 - [Design system](DESIGN.md) and [product brief](PRODUCT.md)

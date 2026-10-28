@@ -43,7 +43,7 @@ Reduced tracking time and clearer priorities are intended benefits. They have no
 
 ## Users and roles
 
-The shipped system has two roles, intern and lead, enforced by database policies. The original PRD also named mentors as an audience; no mentor role exists, so mentoring tasks sit with leads (open decision below).
+The shipped system has two roles, intern and lead, enforced by database policies. Mentor accounts are post-demo in the v2.2 PRD, so the shipped system has no mentor role.
 
 | Role | Can do | Cannot do |
 | --- | --- | --- |
@@ -70,7 +70,7 @@ The P0 workflows and the assistant are implemented as of the October 20 record; 
 
 ## Functional requirements
 
-Every P0 requirement is implemented in code and covered by automated tests; none is accepted until it passes the deployed walkthrough in the verification checklist. Status below is from the October 20 record, with automated tests re-run on October 28.
+Every P0 requirement is implemented in code and covered by automated tests (each ID is traced to files and tests in [prd-traceability.md](prd-traceability.md)); none is accepted until it passes the deployed walkthrough in the verification checklist. Status below is from the October 20 record, with automated tests re-run on October 28.
 
 | ID | Requirement | Status |
 | --- | --- | --- |
@@ -147,8 +147,23 @@ No KPI has been measured yet, so this document reports no results. Each gate bel
 | AI safety | Zero evaluative outputs (no grading, ranking, scoring, penalties or pass/fail) | Same 20 questions plus prepared evaluative prompts | Not run |
 | Findability of next action | At least 80% of users name their next priority within 30 seconds | 3 to 5 users on the deployed intern dashboard | Not run |
 | Dashboard load time | Under 3 seconds | Deployed site, measured in the browser | Not run |
-| Role integrity | Intern and lead see only permitted records | Deployed walkthrough with one lead and one intern account | Local and live-account checks passed; deployed walkthrough pending |
+| Role integrity | Intern and lead see only permitted records | Deployed walkthrough with one lead and one intern account | Intern journey verified on production October 21 (commit c20926e); lead journey and current dev not yet verified |
 | Demo readiness | Two rehearsals and a backup recording | Rehearsal log and recording | Not recorded |
+
+**Baseline KPIs carried from v2.2.** These stay in force; none has data yet.
+
+| KPI | Target | Measured |
+| --- | --- | --- |
+| Requirement completion on time | Increase vs baseline | After launch, per sprint; not started |
+| Missed deadlines per sprint | Decrease vs baseline | After launch; not started |
+| Lead tracking time | Decrease, aim for 30% or more | Lead survey before and after; not started |
+| Repetitive questions to leads | Decrease, aim for 40% or more | Lead count before and after; not started |
+| Blocker resolution time | Decrease vs baseline | Blocker timestamps; not started |
+| Feedback acted on | Increase vs baseline | After launch; not started |
+| Adoption | 70% or more of the cohort active weekly | Usage analytics after launch; not started |
+| Satisfaction | 4 out of 5 or SUS 70+ | Survey after demo or pilot; not started |
+| Open critical bugs | 0 at Demo Day | Not recorded |
+| Accessibility checks | Keyboard works; no status shown by color alone | Icon plus text label built; keyboard pass not run |
 
 ## Delivery timeline and status
 
@@ -180,7 +195,7 @@ The largest risk is that deployed behavior is untested: attachments, Google cons
 
 **Open decisions**
 
-- Mentor role: add it as a third role, or remove mentors from the audience. Not decided.
+- Demo data size: the hosted cohort at the October 20 review had 2 interns, 2 leads and 1 team against the planned 20 interns and 5 teams. Record an explicit scope adjustment or load the larger cohort. Not decided.
 - Repository visibility: keep public or make private. Not decided.
 - Demo Day outcome and any panel comments: not recorded in the repository; add them to the next revision.
 

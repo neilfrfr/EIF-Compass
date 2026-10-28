@@ -12,7 +12,9 @@ Last updated: October 28, 2026.
 
 ## Deployed environment (pending)
 
-- [ ] **Role walkthrough on the deployed site.** Sign in as one lead and one intern at eif-compass.vercel.app. Intern: dashboard, suggested action, task status, requirement draft and submit, blocker report. Lead: cohort dashboard, review queue, blocker resolution, feedback, task create/edit/remove.
+- [x] **Intern walkthrough on the deployed site (October 21, commit `c20926e`).** The demo rehearsal record says the live intern journey showed the expected recommendation, milestone, completion, feedback, blocker response, notifications and agenda, and the AI explanation persisted after reloading history. Not repeated on current `dev`, which is 37 commits ahead (redesign PR #24, PR #25).
+- [ ] **Lead walkthrough on the deployed site.** The rehearsal record says the lead dashboard was not verified live. Check cohort dashboard, review queue, blocker response, feedback, and task create, edit and remove.
+- [ ] **Repeat the intern walkthrough on the current deployment** (after the redesign).
 - [ ] **Migration ledger.** Run `backend/supabase/operations/ledger-query.sql` on the hosted project, then `npm run check:migrations -- --ledger ledger.txt`. Expect "Ledger and folder match."
 - [ ] **Vercel Preview and Production environment variables.** Confirm `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and the Google variables are set for the intended environments, with no `VITE_` prefix on server-only keys.
 - [ ] **Supabase Storage.** Upload, replace, download and remove a private requirement attachment as an intern and as a lead. Confirm an intern cannot read another intern's file.
